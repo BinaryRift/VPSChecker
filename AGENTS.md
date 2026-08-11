@@ -1,7 +1,13 @@
 # AGENTS.md
 
-Behavioral guidelines for developing VPSChecker, a small terminal utility for
-quickly checking VPS IP addresses.
+Behavioral guidelines for developing VPSChecker, a small terminal utility for:
+
+- checking the reputation ("cleanliness") of a VPS IP address;
+- checking whether the IP or its services are reachable from a selected region.
+
+Prefer established external services such as IPQuality for reputation data. Add
+small first-party network checks only when they provide a concrete signal that
+the external services do not cover.
 
 ## 1. Think Before Coding
 
@@ -52,6 +58,8 @@ The test: Every changed line should trace directly to the user's request.
 - If a technology or approach change becomes genuinely necessary, explain the reason and get human approval before making the change.
 - Treat command-line arguments, exit codes, and machine-readable output as public interfaces. Do not change them unintentionally.
 - Do not add a dependency when the standard library or an existing dependency solves the task clearly and reliably.
+- Keep external API credentials out of source code and logs. Read them from environment variables or another existing secret mechanism.
+- Keep reputation results and regional reachability results distinct. Do not infer one from the other.
 
 ## 5. Goal-Driven Execution
 
@@ -59,6 +67,7 @@ The test: Every changed line should trace directly to the user's request.
 
 Transform tasks into verifiable goals:
 - "Validate IP input" → "Write tests for invalid IPv4/IPv6 input, then make them pass"
+- "Check regional availability" → "Define the target region and success signal, then test both reachable and unreachable outcomes"
 - "Fix the check command" → "Write a test that reproduces the failure, then make it pass"
 - "Refactor X" → "Ensure tests pass before and after"
 
