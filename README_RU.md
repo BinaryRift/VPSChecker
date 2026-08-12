@@ -56,6 +56,12 @@ TCP/443 и UDP/443 соответственно. Страна задаётся �
 `--ip` можно не указывать: утилита определит внешний IPv4 через HTTPS. Явное
 значение позволяет пропустить отдельный запрос для автоопределения адреса.
 
+Посмотреть доступные в Check-Host коды стран, количество узлов и города:
+
+```bash
+./scripts/list-check-host-locations.sh
+```
+
 Обновление закреплённой версии IPQuality:
 
 ```bash
@@ -81,5 +87,6 @@ bash tests/ipquality_download_test.sh
 bash tests/ipquality_run_test.sh
 bash tests/reputation_test.sh
 bash tests/check_host_test.sh
+bash tests/list_check_host_locations_test.sh
 bash tests/update_ipquality_test.sh
 ```

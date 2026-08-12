@@ -69,6 +69,14 @@ Show command help:
 ./vps-check.sh --help
 ```
 
+List the country codes currently available through Check-Host:
+
+```bash
+./scripts/list-check-host-locations.sh
+```
+
+The list includes the current node count and cities for each country.
+
 ## Updating IPQuality
 
 Review the latest upstream change and update the pinned version:
@@ -96,5 +104,6 @@ bash tests/ipquality_download_test.sh
 bash tests/ipquality_run_test.sh
 bash tests/reputation_test.sh
 bash tests/check_host_test.sh
+bash tests/list_check_host_locations_test.sh
 bash tests/update_ipquality_test.sh
 ```
