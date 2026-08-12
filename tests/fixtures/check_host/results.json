@@ -1,0 +1,94 @@
+{
+  "success": {
+    "ping": {
+      "ru1.node.check-host.net": [[ ["OK", 0.021, "203.0.113.10"] ]],
+      "ru2.node.check-host.net": [[ ["OK", 0.024, "203.0.113.10"] ]],
+      "fi1.node.check-host.net": [[ ["OK", 0.031, "203.0.113.10"] ]],
+      "de1.node.check-host.net": [[ ["OK", 0.035, "203.0.113.10"] ]],
+      "nl1.node.check-host.net": [[ ["OK", 0.037, "203.0.113.10"] ]]
+    },
+    "tcp": {
+      "ru1.node.check-host.net": [{"time": 0.021, "address": "203.0.113.10"}],
+      "ru2.node.check-host.net": [{"time": 0.024, "address": "203.0.113.10"}],
+      "fi1.node.check-host.net": [{"time": 0.031, "address": "203.0.113.10"}],
+      "de1.node.check-host.net": [{"time": 0.035, "address": "203.0.113.10"}],
+      "nl1.node.check-host.net": [{"time": 0.037, "address": "203.0.113.10"}]
+    },
+    "udp": {
+      "ru1.node.check-host.net": [{"address": "203.0.113.10", "timeout": 1}],
+      "ru2.node.check-host.net": [{"address": "203.0.113.10", "timeout": 1}],
+      "fi1.node.check-host.net": [{"address": "203.0.113.10", "timeout": 1}],
+      "de1.node.check-host.net": [{"address": "203.0.113.10", "timeout": 1}],
+      "nl1.node.check-host.net": [{"address": "203.0.113.10", "timeout": 1}]
+    }
+  },
+  "failure": {
+    "ping": {
+      "ru1.node.check-host.net": [[ ["TIMEOUT", 3.0] ]],
+      "ru2.node.check-host.net": [[ ["TIMEOUT", 3.0] ]],
+      "fi1.node.check-host.net": [[ ["TIMEOUT", 3.0] ]],
+      "de1.node.check-host.net": [[ ["TIMEOUT", 3.0] ]],
+      "nl1.node.check-host.net": [[ ["TIMEOUT", 3.0] ]]
+    },
+    "tcp": {
+      "ru1.node.check-host.net": [{"error": "Connection timed out"}],
+      "ru2.node.check-host.net": [{"error": "Connection timed out"}],
+      "fi1.node.check-host.net": [{"error": "Connection timed out"}],
+      "de1.node.check-host.net": [{"error": "Connection timed out"}],
+      "nl1.node.check-host.net": [{"error": "Connection timed out"}]
+    },
+    "udp": {
+      "ru1.node.check-host.net": [{"error": "Connection refused"}],
+      "ru2.node.check-host.net": [{"error": "Connection refused"}],
+      "fi1.node.check-host.net": [{"error": "Connection refused"}],
+      "de1.node.check-host.net": [{"error": "Connection refused"}],
+      "nl1.node.check-host.net": [{"error": "Connection refused"}]
+    }
+  },
+  "regional": {
+    "ping": {
+      "ru1.node.check-host.net": [[ ["TIMEOUT", 3.0] ]],
+      "ru2.node.check-host.net": [[ ["TIMEOUT", 3.0] ]],
+      "fi1.node.check-host.net": [[ ["OK", 0.031, "203.0.113.10"] ]],
+      "de1.node.check-host.net": [[ ["OK", 0.035, "203.0.113.10"] ]],
+      "nl1.node.check-host.net": [[ ["OK", 0.037, "203.0.113.10"] ]]
+    },
+    "tcp": {
+      "ru1.node.check-host.net": [{"error": "Connection timed out"}],
+      "ru2.node.check-host.net": [{"error": "Connection timed out"}],
+      "fi1.node.check-host.net": [{"time": 0.031, "address": "203.0.113.10"}],
+      "de1.node.check-host.net": [{"time": 0.035, "address": "203.0.113.10"}],
+      "nl1.node.check-host.net": [{"time": 0.037, "address": "203.0.113.10"}]
+    },
+    "udp": {
+      "ru1.node.check-host.net": [{"error": "Connection refused"}],
+      "ru2.node.check-host.net": [{"error": "Connection refused"}],
+      "fi1.node.check-host.net": [{"address": "203.0.113.10", "timeout": 1}],
+      "de1.node.check-host.net": [{"address": "203.0.113.10", "timeout": 1}],
+      "nl1.node.check-host.net": [{"address": "203.0.113.10", "timeout": 1}]
+    }
+  },
+  "incomplete": {
+    "ping": {
+      "ru1.node.check-host.net": [[ ["OK", 0.021, "203.0.113.10"] ]],
+      "ru2.node.check-host.net": [[ ["OK", 0.024, "203.0.113.10"] ]],
+      "fi1.node.check-host.net": [[ ["OK", 0.031, "203.0.113.10"] ]],
+      "de1.node.check-host.net": [[ ["OK", 0.035, "203.0.113.10"] ]],
+      "nl1.node.check-host.net": null
+    },
+    "tcp": {
+      "ru1.node.check-host.net": [{"time": 0.021, "address": "203.0.113.10"}],
+      "ru2.node.check-host.net": [{"time": 0.024, "address": "203.0.113.10"}],
+      "fi1.node.check-host.net": [{"time": 0.031, "address": "203.0.113.10"}],
+      "de1.node.check-host.net": [{"time": 0.035, "address": "203.0.113.10"}],
+      "nl1.node.check-host.net": null
+    },
+    "udp": {
+      "ru1.node.check-host.net": [{"address": "203.0.113.10", "timeout": 1}],
+      "ru2.node.check-host.net": [{"address": "203.0.113.10", "timeout": 1}],
+      "fi1.node.check-host.net": [{"address": "203.0.113.10", "timeout": 1}],
+      "de1.node.check-host.net": [{"address": "203.0.113.10", "timeout": 1}],
+      "nl1.node.check-host.net": null
+    }
+  }
+}

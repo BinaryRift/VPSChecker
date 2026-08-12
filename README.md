@@ -19,6 +19,11 @@ is kept unchanged. VPSChecker separately derives an `OK`, `WARNING`, `POOR`, or
 `UNKNOWN` VPN trust assessment with concrete reasons. Hosting classification and
 mail reputation do not affect this assessment.
 
+Regional checks use the current Check-Host node list. VPSChecker selects up to
+three Russian nodes and three control nodes outside Russia, then runs an
+auxiliary ping, a VLESS TCP connection check, and a Hysteria2 UDP check. A UDP
+result is reported as `OPEN_OR_FILTERED`, not as proof that Hysteria2 works.
+
 If required APT packages are missing, VPSChecker lists them and asks for
 confirmation before running `apt-get update` and installing only those packages
 without recommendations. It never runs a system upgrade or `autoremove`.
@@ -26,10 +31,10 @@ without recommendations. It never runs a system upgrade or `autoremove`.
 ## Temporary files
 
 Runtime files are created under `${TMPDIR}` or `/tmp` when `TMPDIR` is unset.
-IPQuality source and runtime copies, raw JSON, diagnostics, and the VPN trust
-result are stored in a `vpschecker.XXXXXX` directory. APT change tracking uses a
-separate `vpschecker-deps.XXXXXX` directory. Both are removed on normal exit and
-handled termination signals.
+IPQuality source and runtime copies, raw JSON, diagnostics, the VPN trust result,
+and Check-Host responses are stored in a `vpschecker.XXXXXX` directory. APT
+change tracking uses a separate `vpschecker-deps.XXXXXX` directory. Both are
+removed on normal exit and handled termination signals.
 
 ## Requirements
 
@@ -87,5 +92,6 @@ bash tests/dependencies_test.sh
 bash tests/ipquality_download_test.sh
 bash tests/ipquality_run_test.sh
 bash tests/reputation_test.sh
+bash tests/check_host_test.sh
 bash tests/update_ipquality_test.sh
 ```

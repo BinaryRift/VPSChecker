@@ -1,0 +1,34 @@
+{
+  "nodes": {
+    "ru1.node.check-host.net": {
+      "asn": "AS64501",
+      "ip": "192.0.2.11",
+      "location": ["ru", "Russia", "Moscow"]
+    },
+    "ru2.node.check-host.net": {
+      "asn": "AS64502",
+      "ip": "192.0.2.12",
+      "location": ["ru", "Russia", "Saint Petersburg"]
+    },
+    "fi1.node.check-host.net": {
+      "asn": "AS64503",
+      "ip": "192.0.2.21",
+      "location": ["fi", "Finland", "Helsinki"]
+    },
+    "de1.node.check-host.net": {
+      "asn": "AS64504",
+      "ip": "192.0.2.22",
+      "location": ["de", "Germany", "Frankfurt"]
+    },
+    "nl1.node.check-host.net": {
+      "asn": "AS64505",
+      "ip": "192.0.2.23",
+      "location": ["nl", "Netherlands", "Amsterdam"]
+    },
+    "us1.node.check-host.net": {
+      "asn": "AS64506",
+      "ip": "192.0.2.24",
+      "location": ["us", "USA", "New York"]
+    }
+  }
+}

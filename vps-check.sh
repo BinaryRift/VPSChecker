@@ -9,6 +9,8 @@ readonly SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 . "$SCRIPT_DIR/lib/ipquality.sh"
 # shellcheck source=lib/reputation.sh
 . "$SCRIPT_DIR/lib/reputation.sh"
+# shellcheck source=lib/check_host.sh
+. "$SCRIPT_DIR/lib/check_host.sh"
 
 readonly EXIT_USAGE=2
 readonly DEFAULT_VLESS_PORT=443
@@ -21,6 +23,7 @@ PREFLIGHT_EXTERNAL_IPV4=''
 cleanup_runtime() {
     cleanup_dependency_journal
     cleanup_reputation_temp
+    cleanup_check_host_temp
     cleanup_ipquality_temp
 }
 
@@ -296,7 +299,8 @@ main() {
     fi
     prepare_ipquality || return 1
     run_ipquality || return 1
-    evaluate_vpn_trust "$IPQUALITY_JSON_PATH"
+    evaluate_vpn_trust "$IPQUALITY_JSON_PATH" || return 1
+    run_check_host "$ip" "$vless_port" "$hysteria2_port"
 }
 
 if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
