@@ -309,6 +309,7 @@ generate_reports() {
     local hysteria2_port=$4
     local vless_listener=$5
     local hysteria2_listener=$6
+    local print_report=${7:-0}
     local generated_at report_id json_path text_path json_temp text_temp path
 
     for path in "$IPQUALITY_JSON_PATH" "$VPN_TRUST_JSON_PATH" "$CHECK_HOST_JSON_PATH"; do
@@ -348,6 +349,10 @@ generate_reports() {
     REPORT_TEMP_PATHS=()
     REPORT_JSON_PATH=$json_path
     REPORT_TEXT_PATH=$text_path
+    if (( print_report == 1 )); then
+        printf '\n'
+        cat -- "$REPORT_TEXT_PATH" || return 1
+    fi
     printf '\nReports:\n'
     printf '  JSON: %s\n' "$REPORT_JSON_PATH"
     printf '  Text: %s\n' "$REPORT_TEXT_PATH"

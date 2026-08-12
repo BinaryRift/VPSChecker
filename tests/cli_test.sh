@@ -53,6 +53,8 @@ run_case 'uses Russia as the default target country' 0 'Target country: ru' \
     --ip 203.0.113.10
 run_case 'accepts and normalizes a target country' 0 'Target country: de' \
     --ip 203.0.113.10 --country DE
+run_case 'prints the text report when requested' 0 'VPSChecker report' \
+    --ip 203.0.113.10 --print-report
 run_case 'shows help' 0 'Usage:' --help
 
 run_case 'rejects an IPv4 octet above 255' 2 'Invalid IPv4 address' \
@@ -77,6 +79,8 @@ run_case 'rejects duplicate options' 2 'Option --vless-port was provided more th
     --vless-port 443 --vless-port 8443 --hysteria2-port 8443
 run_case 'rejects a duplicate country option' 2 'Option --country was provided more than once' \
     --country ru --country de
+run_case 'rejects a duplicate print-report option' 2 'Option --print-report was provided more than once' \
+    --print-report --print-report
 run_case 'rejects unknown options' 2 'Unknown option' \
     --vless-port 443 --hysteria2-port 8443 --unknown
 run_case 'rejects positional arguments' 2 'Unexpected argument' \

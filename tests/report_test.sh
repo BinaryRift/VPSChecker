@@ -230,6 +230,26 @@ test_conflicting_data_is_inconclusive() (
     ' "$REPORT_JSON_PATH" >/dev/null
 )
 
+test_console_output_is_disabled_by_default() (
+    local output
+
+    setup_report ok network-ok.json
+    trap cleanup_report_test EXIT
+
+    output=$(generate_reports 203.0.113.10 ru 443 8443 listening listening) || return 1
+    [[ $output != *'VPSChecker report'* ]]
+)
+
+test_console_output_can_be_enabled() (
+    local output
+
+    setup_report ok network-ok.json
+    trap cleanup_report_test EXIT
+
+    output=$(generate_reports 203.0.113.10 ru 443 8443 listening listening 1) || return 1
+    [[ $output == *'VPSChecker report'* && $output == *'VPN suitability: OK'* ]]
+)
+
 run_test 'creates stable JSON and text reports without changing raw IPQuality data' test_stable_report_structure
 run_test 'justifies replacement for independently confirmed poor reputation' test_poor_reputation_justifies_replacement
 run_test 'justifies replacement for a confirmed regional TCP failure' test_confirmed_regional_failure_justifies_replacement
@@ -238,6 +258,8 @@ run_test 'does not justify replacement for VPN classification alone' test_expect
 run_test 'does not justify replacement when the local service is not listening' test_local_service_failure_does_not_justify_replacement
 run_test 'returns INCONCLUSIVE when required data is unavailable' test_missing_data_is_inconclusive
 run_test 'returns INCONCLUSIVE when reputation sources only conflict' test_conflicting_data_is_inconclusive
+run_test 'does not print the text report by default' test_console_output_is_disabled_by_default
+run_test 'prints the text report when requested' test_console_output_can_be_enabled
 
 printf '\n%s passed, %s failed\n' "$passed" "$failed"
 (( failed == 0 ))

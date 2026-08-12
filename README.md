@@ -83,6 +83,12 @@ Show command help:
 ./vps-check.sh --help
 ```
 
+Also print the text report to the terminal while keeping both report files:
+
+```bash
+./vps-check.sh --print-report
+```
+
 List the country codes currently available through Check-Host:
 
 ```bash

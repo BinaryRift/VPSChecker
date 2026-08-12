@@ -36,13 +36,14 @@ cleanup_runtime() {
 usage() {
     cat <<'EOF'
 Usage:
-  vps-check.sh [--ip IPV4] [--country CODE] [--vless-port PORT] [--hysteria2-port PORT]
+  vps-check.sh [--ip IPV4] [--country CODE] [--vless-port PORT] [--hysteria2-port PORT] [--print-report]
 
 Options:
   --ip IPV4              VPS IPv4 address. Omit to auto-detect it.
   --country CODE          Check-Host target country code (default: ru).
   --vless-port PORT      VLESS TCP port (default: 443).
   --hysteria2-port PORT  Hysteria2 UDP port (default: 443).
+  --print-report          Also print the text report to the terminal.
   -h, --help             Show this help.
 EOF
 }
@@ -254,6 +255,8 @@ main() {
     local country_seen=0
     local vless_port_seen=0
     local hysteria2_port_seen=0
+    local print_report=0
+    local print_report_seen=0
 
     while (( $# > 0 )); do
         case $1 in
@@ -284,6 +287,12 @@ main() {
                 hysteria2_port=$2
                 hysteria2_port_seen=1
                 shift 2
+                ;;
+            --print-report)
+                (( print_report_seen == 0 )) || fail_usage 'Option --print-report was provided more than once.'
+                print_report=1
+                print_report_seen=1
+                shift
                 ;;
             -h|--help)
                 usage
@@ -339,7 +348,7 @@ main() {
     evaluate_vpn_trust "$IPQUALITY_JSON_PATH" || return 1
     run_check_host "$ip" "$vless_port" "$hysteria2_port" "$country" || return 1
     generate_reports "$ip" "$country" "$vless_port" "$hysteria2_port" \
-        "$VLESS_LISTENER_STATE" "$HYSTERIA2_LISTENER_STATE"
+        "$VLESS_LISTENER_STATE" "$HYSTERIA2_LISTENER_STATE" "$print_report"
 }
 
 if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
