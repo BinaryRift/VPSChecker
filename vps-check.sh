@@ -3,6 +3,8 @@
 set -u
 
 readonly SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=lib/dependencies.sh
+. "$SCRIPT_DIR/lib/dependencies.sh"
 # shellcheck source=lib/ipquality.sh
 . "$SCRIPT_DIR/lib/ipquality.sh"
 
@@ -12,7 +14,12 @@ readonly DEFAULT_HYSTERIA2_PORT=443
 readonly DEFAULT_OS_RELEASE_FILE=/etc/os-release
 readonly IP_LOOKUP_URL=https://api.ipify.org
 readonly -a CHECKED_COMMANDS=(curl sha256sum jq bc nc dig ip ss dpkg-query apt-get)
-readonly -a CHECKED_PACKAGES=(jq curl bc netcat-openbsd dnsutils iproute2)
+PREFLIGHT_EXTERNAL_IPV4=''
+
+cleanup_runtime() {
+    cleanup_dependency_journal
+    cleanup_ipquality_temp
+}
 
 usage() {
     cat <<'EOF'
@@ -161,6 +168,7 @@ run_preflight() {
     local os_info os_id os_version os_name external_ip command package
     local failed=0
 
+    PREFLIGHT_EXTERNAL_IPV4=''
     printf '\nPreflight:\n'
 
     if os_info=$(read_os_info "$os_release_file"); then
@@ -181,12 +189,13 @@ run_preflight() {
 
     if [[ -n $requested_ip ]]; then
         external_ip=$requested_ip
+        PREFLIGHT_EXTERNAL_IPV4=$external_ip
         printf '  External IPv4: %s (provided)\n' "$external_ip"
     elif external_ip=$(detect_external_ipv4); then
+        PREFLIGHT_EXTERNAL_IPV4=$external_ip
         printf '  External IPv4: %s (detected)\n' "$external_ip"
     else
-        printf '  External IPv4: unavailable\n'
-        failed=1
+        printf '  External IPv4: unavailable (will retry after dependency setup)\n'
     fi
 
     printf '  Commands:\n'
@@ -265,12 +274,23 @@ main() {
     printf 'VLESS TCP port: %s\n' "$vless_port"
     printf 'Hysteria2 UDP port: %s\n' "$hysteria2_port"
 
-    trap cleanup_ipquality_temp EXIT
+    trap cleanup_runtime EXIT
     trap 'exit 129' HUP
     trap 'exit 130' INT
     trap 'exit 143' TERM
 
     run_preflight "$ip" "$vless_port" "$hysteria2_port" || return 1
+    ensure_dependencies || return 1
+    if [[ -z $ip ]]; then
+        if [[ -n $PREFLIGHT_EXTERNAL_IPV4 ]]; then
+            ip=$PREFLIGHT_EXTERNAL_IPV4
+        elif ip=$(detect_external_ipv4); then
+            printf '\nExternal IPv4 after dependency setup: %s\n' "$ip"
+        else
+            printf 'Error: external IPv4 is unavailable after dependency setup.\n' >&2
+            return 1
+        fi
+    fi
     prepare_ipquality
 }
 

@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+set -u
+
+if [[ $* == *'${binary:Package}'* ]]; then
+    printf '%s\n' jq curl bc netcat-openbsd dnsutils iproute2
+else
+    printf 'install ok installed'
+fi

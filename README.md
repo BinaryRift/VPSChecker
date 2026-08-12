@@ -13,6 +13,10 @@ Reputation, regional reachability, and service state are reported separately.
 The utility is intended to leave minimal changes on the VPS and uses pinned,
 checksum-verified versions of third-party tools.
 
+If required APT packages are missing, VPSChecker lists them and asks for
+confirmation before running `apt-get update` and installing only those packages
+without recommendations. It never runs a system upgrade or `autoremove`.
+
 ## Requirements
 
 - Debian or Ubuntu;
@@ -65,6 +69,7 @@ checksum and diff, and asks for confirmation before changing the pin.
 ```bash
 bash tests/cli_test.sh
 bash tests/preflight_test.sh
+bash tests/dependencies_test.sh
 bash tests/ipquality_download_test.sh
 bash tests/update_ipquality_test.sh
 ```

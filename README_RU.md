@@ -17,6 +17,11 @@ VPSChecker — небольшая терминальная утилита для
 закреплённого commit, проверяет SHA-256 и удаляет временный файл при завершении.
 IPQuality пока не запускается.
 
+Если отсутствуют необходимые APT-пакеты, VPSChecker показывает их список и
+запрашивает подтверждение. После подтверждения выполняется `apt-get update`,
+затем устанавливаются отсутствующие пакеты без рекомендаций. Общий `upgrade` и
+`autoremove` не запускаются.
+
 ```bash
 ./vps-check.sh
 ```
@@ -51,6 +56,7 @@ checksum и diff, после чего запрашивает подтвержд�
 ```bash
 bash tests/cli_test.sh
 bash tests/preflight_test.sh
+bash tests/dependencies_test.sh
 bash tests/ipquality_download_test.sh
 bash tests/update_ipquality_test.sh
 ```

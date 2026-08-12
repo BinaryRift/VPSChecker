@@ -116,6 +116,15 @@ test_listener_states() (
     [[ $(listener_state udp 443) == 'not listening' ]]
 )
 
+test_unavailable_ip_can_be_retried_after_dependencies() (
+    curl() {
+        return 1
+    }
+
+    VPSCHECK_OS_RELEASE_FILE="$FIXTURES_DIR/os-release.ubuntu"
+    run_preflight '' 443 443 >/dev/null
+)
+
 run_test 'recognizes Ubuntu as supported' test_ubuntu_is_supported
 run_test 'recognizes Debian as supported' test_debian_is_supported
 run_test 'rejects an unsupported distribution' test_unsupported_os_fails_preflight
@@ -124,6 +133,7 @@ run_test 'rejects an invalid detected IPv4 address' test_invalid_detected_ipv4_i
 run_test 'reports sudo without invoking it' test_privilege_detection_does_not_call_sudo
 run_test 'detects installed and missing APT packages' test_package_states
 run_test 'detects TCP and UDP listener states' test_listener_states
+run_test 'allows IP detection retry after dependency setup' test_unavailable_ip_can_be_retried_after_dependencies
 
 printf '\n%s passed, %s failed\n' "$passed" "$failed"
 (( failed == 0 ))
