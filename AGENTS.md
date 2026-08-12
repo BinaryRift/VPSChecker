@@ -88,3 +88,13 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 - Do not run the full test suite after every step.
 - Run the full test suite only when the change affects broadly shared/core behavior, at an explicit integration milestone, or when the human requests it.
 - If broader regression risk remains after targeted tests, explain it instead of silently expanding the test scope.
+
+## 7. File Size and Modularity
+
+**Keep source files readable and split them by responsibility.**
+
+- Treat 400 lines as the target maximum for a shell source file.
+- At 500 lines, explicitly review whether the file should be split before adding more code.
+- Do not split a cohesive file only to satisfy a line count. Extract a module when it has a clear, independent responsibility.
+- Keep the entry point short and focused on orchestrating checks. Move substantial checks and report generation into focused files when their size justifies it.
+- Do not create placeholder modules, speculative shared libraries, or a generic `utils.sh` without multiple concrete consumers.
