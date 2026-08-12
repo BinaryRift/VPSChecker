@@ -5,10 +5,10 @@ set -u
 readonly CHECK_HOST_NODES_URL=https://check-host.net/nodes/hosts
 
 usage() {
-    cat <<'EOF'
-Usage:
-  list-check-host-locations.sh
+    local command_name=${VPSCHECK_LOCATIONS_COMMAND:-list-check-host-locations.sh}
 
+    printf 'Usage:\n  %s\n\n' "$command_name"
+    cat <<'EOF'
 Lists the countries currently represented by Check-Host nodes. Country codes
 can be passed to vps-check.sh with --country.
 EOF

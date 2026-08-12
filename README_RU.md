@@ -131,8 +131,11 @@ TCP/443 и UDP/443 соответственно. Страна задаётся �
 Посмотреть доступные в Check-Host коды стран, количество узлов и города:
 
 ```bash
-./scripts/list-check-host-locations.sh
+./vps-check.sh list-locations
 ```
+
+Helper по-прежнему можно запустить напрямую через
+`./scripts/list-check-host-locations.sh`.
 
 Обновление закреплённой версии IPQuality:
 

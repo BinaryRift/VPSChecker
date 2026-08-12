@@ -5,6 +5,7 @@ set -u
 readonly TEST_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 readonly PROJECT_DIR=$(cd "$TEST_DIR/.." && pwd)
 readonly HELPER="$PROJECT_DIR/scripts/list-check-host-locations.sh"
+readonly CLI="$PROJECT_DIR/vps-check.sh"
 readonly MOCK_BIN="$TEST_DIR/fixtures/check_host/bin"
 
 passed=0
@@ -39,6 +40,20 @@ test_help() {
     [[ $output == *'--country'* ]]
 }
 
+test_cli_subcommand_lists_locations() {
+    local output
+
+    output=$(PATH="$MOCK_BIN:$PATH" "$CLI" list-locations) || return 1
+    [[ $output == *$'RU\tRussia\t2\tMoscow, Saint Petersburg'* ]]
+}
+
+test_cli_subcommand_help() {
+    local output
+
+    output=$($CLI list-locations --help) || return 1
+    [[ $output == *'vps-check.sh list-locations'* ]]
+}
+
 test_rejects_arguments() {
     local output status
 
@@ -65,6 +80,8 @@ test_invalid_response() {
 
 run_test 'lists countries, node counts, and cities' test_lists_grouped_locations
 run_test 'shows help without querying the API' test_help
+run_test 'lists locations through the main CLI' test_cli_subcommand_lists_locations
+run_test 'shows wrapper usage through the main CLI' test_cli_subcommand_help
 run_test 'rejects unsupported arguments' test_rejects_arguments
 run_test 'reports a Check-Host API failure' test_api_failure
 run_test 'rejects an invalid Check-Host response' test_invalid_response

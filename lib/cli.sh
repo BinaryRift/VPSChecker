@@ -3,6 +3,7 @@ usage() {
 Usage:
   vps-check.sh [OPTIONS]
   vps-check.sh cleanup
+  vps-check.sh list-locations
 
 Options:
   --ip IPV4              VPS IPv4 address. Omit to auto-detect it.

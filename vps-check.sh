@@ -255,6 +255,12 @@ main() {
         run_dependency_cleanup_command "$@"
         return
     fi
+    if [[ ${1:-} == list-locations ]]; then
+        shift
+        VPSCHECK_LOCATIONS_COMMAND="${0##*/} list-locations" \
+            "$SCRIPT_DIR/scripts/list-check-host-locations.sh" "$@"
+        return
+    fi
 
     while (( $# > 0 )); do
         case $1 in

@@ -143,10 +143,11 @@ reports. Releases should use a matching `v<version>` Git tag, for example
 List the country codes currently available through Check-Host:
 
 ```bash
-./scripts/list-check-host-locations.sh
+./vps-check.sh list-locations
 ```
 
-The list includes the current node count and cities for each country.
+The list includes the current node count and cities for each country. The helper
+remains directly available as `./scripts/list-check-host-locations.sh`.
 
 ## Updating IPQuality
 
