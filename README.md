@@ -16,22 +16,58 @@ leave minimal changes on the VPS.
 
 - Debian or Ubuntu;
 - Bash 5.1 or newer;
+- `curl` to download the installer;
 - IPv4 connectivity.
 
-## Usage
+## Quick start
 
-Run with automatic external IPv4 detection and the default ports:
+Run these commands from the directory where you want to keep the reports.
+Download the installer, install the latest checksum-verified release, and remove
+the installer after a successful installation:
 
 ```bash
-./vps-check.sh
+# Download the installer.
+curl -fsSLo install-vpschecker.sh \
+  https://raw.githubusercontent.com/BinaryRift/VPSChecker/main/install.sh &&
+
+# Install the latest release.
+bash install-vpschecker.sh &&
+
+# Remove the installer.
+rm -- install-vpschecker.sh
 ```
 
-The default target country is Russia (`ru`), using a two-letter ISO country code.
-The default ports are TCP/443 for VLESS and UDP/443 for Hysteria2. The country,
-IP, and either port can be specified explicitly:
+Run the check with automatic external IPv4 detection, Russia as the target
+country, and TCP/443 and UDP/443 as the VLESS and Hysteria2 ports:
 
 ```bash
-./vps-check.sh \
+# Run the check with default settings.
+./vpschecker/vps-check.sh
+```
+
+If VPSChecker prints a cleanup command, run it later from the same directory. It
+shows the exact packages and asks for confirmation before removing them:
+
+```bash
+# Remove only APT packages added by VPSChecker.
+./vpschecker/vps-check.sh cleanup
+```
+
+After cleanup, or when no cleanup was required, remove the utility. Reports under
+`./reports` are outside its directory and remain available:
+
+```bash
+# Remove VPSChecker while keeping its reports.
+rm -r -- ./vpschecker
+```
+
+## Advanced usage
+
+The target country uses a two-letter ISO country code. The IP, country, default
+ports, and report directory can be specified explicitly:
+
+```bash
+./vpschecker/vps-check.sh \
   --ip 203.0.113.10 \
   --country de \
   --vless-port 2053 \
@@ -39,45 +75,35 @@ IP, and either port can be specified explicitly:
   --report-dir reports/de
 ```
 
-Show command help:
+When `--ip` is omitted, VPSChecker detects the external IPv4 through HTTPS. An
+explicit value skips that request.
+
+Also print the full text report while keeping both report files:
 
 ```bash
-./vps-check.sh --help
+./vpschecker/vps-check.sh --print-report
 ```
 
-Show the installed version:
+Automatically remove packages added by VPSChecker after the checks:
 
 ```bash
-./vps-check.sh --version
+./vpschecker/vps-check.sh --cleanup
 ```
-
-Also print the text report to the terminal while keeping both report files:
-
-```bash
-./vps-check.sh --print-report
-```
-
-Automatically execute the pending cleanup plan after the checks:
-
-```bash
-./vps-check.sh --cleanup
-```
-
-Without that flag, run the printed command later from the same directory:
-
-```bash
-./vps-check.sh cleanup
-```
-
-The standalone command shows the exact packages and asks for confirmation.
 
 List the country codes currently available through Check-Host:
 
 ```bash
-./vps-check.sh list-locations
+./vpschecker/vps-check.sh list-locations
 ```
 
 The list includes the current node count and cities for each country.
+
+Show command help or the installed version:
+
+```bash
+./vpschecker/vps-check.sh --help
+./vpschecker/vps-check.sh --version
+```
 
 ## Reports
 
@@ -92,7 +118,7 @@ different relative or absolute path with `--report-dir`; an existing directory's
 permissions are not changed:
 
 ```bash
-./vps-check.sh --report-dir /var/lib/vpschecker/reports
+./vpschecker/vps-check.sh --report-dir /var/lib/vpschecker/reports
 ```
 
 The JSON report has stable top-level sections for reputation, VPN suitability,
