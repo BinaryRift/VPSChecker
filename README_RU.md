@@ -28,6 +28,29 @@ Hysteria2. Репутация, региональная доступность �
 UDP-проверка порта Hysteria2. Результат UDP обозначается как `OPEN_OR_FILTERED` и
 не считается подтверждением работоспособности протокола.
 
+## Внешние сервисы
+
+VPSChecker автоматически использует:
+
+- [xykt/IPQuality](https://github.com/xykt/IPQuality) — загружается по
+  закреплённому commit и собирает данные о репутации и геолокации IP. IPQuality
+  обращается к собственным внешним источникам данных; privacy mode запрещает
+  публикацию ссылки на его онлайн-отчёт, но не переводит проверку в офлайн-режим.
+- [Check-Host API](https://check-host.net/about/api?lang=en) — предоставляет
+  актуальный список узлов и выполняет региональные ping-, TCP- и UDP-проверки.
+- [ipify](https://www.ipify.org/) — определяет внешний IPv4 через
+  `https://api.ipify.org`, только если не указан параметр `--ip`.
+
+При результатах `WARNING` и `POOR` в отчёт добавляются ссылки для ручной
+перепроверки через [AbuseIPDB](https://www.abuseipdb.com/),
+[Scamalytics](https://www.scamalytics.com/),
+[IPQualityScore](https://www.ipqualityscore.com/free-ip-lookup-proxy-vpn-test/),
+[VirusTotal](https://www.virustotal.com/gui/home/search) и
+[Cisco Talos Reputation Center](https://talosintelligence.com/reputation_center/).
+VPSChecker не обращается к этим страницам только ради формирования ссылок. При
+этом некоторые из сервисов могут использоваться самим IPQuality как источники
+данных.
+
 Если отсутствуют необходимые APT-пакеты, VPSChecker показывает их список и
 запрашивает подтверждение. После подтверждения выполняется `apt-get update`,
 затем устанавливаются отсутствующие пакеты без рекомендаций. Общий `upgrade` и

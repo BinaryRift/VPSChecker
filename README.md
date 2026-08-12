@@ -25,6 +25,28 @@ then runs an auxiliary ping, a VLESS TCP connection check, and a Hysteria2 UDP
 check. A UDP result is reported as `OPEN_OR_FILTERED`, not as proof that
 Hysteria2 works.
 
+## External services
+
+VPSChecker automatically uses:
+
+- [xykt/IPQuality](https://github.com/xykt/IPQuality) — downloaded at a pinned
+  commit and run to collect IP reputation and geolocation signals. IPQuality
+  contacts its own upstream data providers; privacy mode prevents publishing its
+  online report link, but does not make the check offline.
+- [Check-Host API](https://check-host.net/about/api?lang=en) — provides the
+  current node list and performs regional ping, TCP, and UDP checks.
+- [ipify](https://www.ipify.org/) — detects the external IPv4 through
+  `https://api.ipify.org` only when `--ip` is omitted.
+
+For `WARNING` and `POOR` results, reports include links for manual verification
+with [AbuseIPDB](https://www.abuseipdb.com/),
+[Scamalytics](https://www.scamalytics.com/),
+[IPQualityScore](https://www.ipqualityscore.com/free-ip-lookup-proxy-vpn-test/),
+[VirusTotal](https://www.virustotal.com/gui/home/search), and
+[Cisco Talos Reputation Center](https://talosintelligence.com/reputation_center/).
+VPSChecker does not query these pages merely to generate the links. Some of them
+may also be upstream data sources used internally by IPQuality.
+
 If required APT packages are missing, VPSChecker lists them and asks for
 confirmation before running `apt-get update` and installing only those packages
 without recommendations. It never runs a system upgrade or `autoremove`.
