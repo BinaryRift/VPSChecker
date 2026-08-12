@@ -5,6 +5,7 @@ set -u
 readonly TEST_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 readonly PROJECT_DIR=$(cd "$TEST_DIR/.." && pwd)
 readonly CLI="$PROJECT_DIR/vps-check.sh"
+readonly OS_RELEASE_FIXTURE="$TEST_DIR/fixtures/os-release.ubuntu"
 
 passed=0
 failed=0
@@ -16,7 +17,7 @@ run_case() {
     local output status
     shift 3
 
-    output=$("$CLI" "$@" 2>&1)
+    output=$(VPSCHECK_OS_RELEASE_FILE="$OS_RELEASE_FIXTURE" "$CLI" "$@" 2>&1)
     status=$?
 
     if [[ $status -eq $expected_status && $output == *"$expected_text"* ]]; then
@@ -33,13 +34,14 @@ run_case() {
     (( failed += 1 ))
 }
 
-run_case 'uses default ports' 0 $'VLESS TCP port: 443\nHysteria2 UDP port: 443'
+run_case 'uses default ports' 0 $'VLESS TCP port: 443\nHysteria2 UDP port: 443' \
+    --ip 203.0.113.10
 run_case 'accepts explicit IPv4 and boundary ports' 0 'IP: 203.0.113.10' \
     --ip 203.0.113.10 --vless-port 1 --hysteria2-port 65535
 run_case 'accepts only a VLESS port override' 0 'Hysteria2 UDP port: 443' \
-    --vless-port 2053
+    --ip 203.0.113.10 --vless-port 2053
 run_case 'accepts only a Hysteria2 port override' 0 'VLESS TCP port: 443' \
-    --hysteria2-port 8443
+    --ip 203.0.113.10 --hysteria2-port 8443
 run_case 'shows help' 0 'Usage:' --help
 
 run_case 'rejects an IPv4 octet above 255' 2 'Invalid IPv4 address' \
