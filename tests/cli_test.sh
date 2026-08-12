@@ -43,6 +43,8 @@ run_case() {
 
 run_case 'uses default ports' 0 $'VLESS TCP port: 443\nHysteria2 UDP port: 443' \
     --ip 203.0.113.10
+run_case 'disables automatic package cleanup by default' 0 'Automatic package cleanup: disabled' \
+    --ip 203.0.113.10
 run_case 'accepts explicit IPv4 and boundary ports' 0 'IP: 203.0.113.10' \
     --ip 203.0.113.10 --vless-port 1 --hysteria2-port 65535
 run_case 'accepts only a VLESS port override' 0 'Hysteria2 UDP port: 443' \
@@ -55,7 +57,11 @@ run_case 'accepts and normalizes a target country' 0 'Target country: de' \
     --ip 203.0.113.10 --country DE
 run_case 'prints the text report when requested' 0 'VPSChecker report' \
     --ip 203.0.113.10 --print-report
+run_case 'enables automatic package cleanup' 0 'Automatic package cleanup: enabled' \
+    --ip 203.0.113.10 --cleanup
 run_case 'shows help' 0 'Usage:' --help
+run_case 'shows cleanup command help' 0 'Safely remove packages recorded' cleanup --help
+run_case 'reports a missing cleanup plan' 1 'no valid cleanup plan' cleanup
 
 run_case 'rejects an IPv4 octet above 255' 2 'Invalid IPv4 address' \
     --ip 203.0.113.256 --vless-port 443 --hysteria2-port 8443
@@ -81,6 +87,10 @@ run_case 'rejects a duplicate country option' 2 'Option --country was provided m
     --country ru --country de
 run_case 'rejects a duplicate print-report option' 2 'Option --print-report was provided more than once' \
     --print-report --print-report
+run_case 'rejects a duplicate cleanup option' 2 'Option --cleanup was provided more than once' \
+    --cleanup --cleanup
+run_case 'rejects cleanup command arguments' 2 'cleanup command does not accept arguments' \
+    cleanup jq
 run_case 'rejects unknown options' 2 'Unknown option' \
     --vless-port 443 --hysteria2-port 8443 --unknown
 run_case 'rejects positional arguments' 2 'Unexpected argument' \

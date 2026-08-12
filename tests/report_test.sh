@@ -15,6 +15,8 @@ DEPENDENCY_REQUESTED_PACKAGES=()
 
 # shellcheck source=../lib/report.sh
 . "$PROJECT_DIR/lib/report.sh"
+# shellcheck source=../lib/cleanup.sh
+. "$PROJECT_DIR/lib/cleanup.sh"
 
 passed=0
 failed=0
@@ -158,7 +160,8 @@ test_stable_report_structure() (
         and .protocol_checks.vless.handshake_performed == false
         and .cleanup.packages.added == ["jq", "libjq1"]
         and .cleanup.packages.updated_existing_not_rolled_back == ["curl"]
-        and .cleanup.packages.removal_status == "NOT_PERFORMED"
+        and .cleanup.packages.automatic_cleanup_requested == false
+        and .cleanup.packages.removal_status == "DEFERRED"
     ' "$REPORT_JSON_PATH" >/dev/null
 )
 
@@ -236,7 +239,8 @@ test_console_output_is_disabled_by_default() (
     setup_report ok network-ok.json
     trap cleanup_report_test EXIT
 
-    output=$(generate_reports 203.0.113.10 ru 443 8443 listening listening) || return 1
+    generate_reports 203.0.113.10 ru 443 8443 listening listening || return 1
+    output=$(present_reports) || return 1
     [[ $output != *'VPSChecker report'* ]]
 )
 
@@ -246,8 +250,39 @@ test_console_output_can_be_enabled() (
     setup_report ok network-ok.json
     trap cleanup_report_test EXIT
 
-    output=$(generate_reports 203.0.113.10 ru 443 8443 listening listening 1) || return 1
+    generate_reports 203.0.113.10 ru 443 8443 listening listening || return 1
+    output=$(present_reports 1) || return 1
     [[ $output == *'VPSChecker report'* && $output == *'VPN suitability: OK'* ]]
+)
+
+test_finalizes_cleanup_status() (
+    local text_report
+
+    setup_report ok network-ok.json
+    trap cleanup_report_test EXIT
+    DEPENDENCY_ADDED_PACKAGES=(jq libjq1)
+
+    generate_reports 203.0.113.10 ru 443 8443 listening listening || return 1
+    finalize_report_cleanup REMOVED || return 1
+    text_report=$(< "$REPORT_TEXT_PATH")
+    [[ $text_report == *'Temporary files: REMOVED'* ]] || return 1
+    [[ $text_report == *'Added package removal: REMOVED'* ]] || return 1
+    jq -e '
+        .cleanup.temporary_files.status == "REMOVED"
+        and .cleanup.packages.removal_status == "REMOVED"
+    ' "$REPORT_JSON_PATH" >/dev/null
+)
+
+test_marks_automatic_cleanup_as_scheduled() (
+    setup_report ok network-ok.json
+    trap cleanup_report_test EXIT
+    DEPENDENCY_ADDED_PACKAGES=(jq)
+
+    generate_reports 203.0.113.10 ru 443 8443 listening listening 1 || return 1
+    jq -e '
+        .cleanup.packages.automatic_cleanup_requested == true
+        and .cleanup.packages.removal_status == "SCHEDULED"
+    ' "$REPORT_JSON_PATH" >/dev/null
 )
 
 run_test 'creates stable JSON and text reports without changing raw IPQuality data' test_stable_report_structure
@@ -260,6 +295,8 @@ run_test 'returns INCONCLUSIVE when required data is unavailable' test_missing_d
 run_test 'returns INCONCLUSIVE when reputation sources only conflict' test_conflicting_data_is_inconclusive
 run_test 'does not print the text report by default' test_console_output_is_disabled_by_default
 run_test 'prints the text report when requested' test_console_output_can_be_enabled
+run_test 'finalizes cleanup status in both reports' test_finalizes_cleanup_status
+run_test 'marks requested automatic cleanup as scheduled' test_marks_automatic_cleanup_as_scheduled
 
 printf '\n%s passed, %s failed\n' "$passed" "$failed"
 (( failed == 0 ))

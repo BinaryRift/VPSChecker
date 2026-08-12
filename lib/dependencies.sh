@@ -2,23 +2,34 @@ readonly -a CHECKED_PACKAGES=(jq curl bc netcat-openbsd dnsutils iproute2)
 
 DEPENDENCY_JOURNAL_DIR=''
 DEPENDENCY_JOURNAL_PATH=''
+DEPENDENCY_BEFORE_PACKAGES_PATH=''
+DEPENDENCY_PLANNED_PACKAGES_PATH=''
 DEPENDENCY_ADDED_PACKAGES=()
 DEPENDENCY_UPDATED_PACKAGES=()
 DEPENDENCY_REQUESTED_PACKAGES=()
+DEPENDENCY_CLEANUP_STATUS='NOT_REQUIRED'
 
 cleanup_dependency_journal() {
-    if [[ -n ${DEPENDENCY_JOURNAL_PATH:-} && -f $DEPENDENCY_JOURNAL_PATH ]]; then
-        rm -f -- "$DEPENDENCY_JOURNAL_PATH"
-    fi
+    local path
+
+    for path in \
+        "${DEPENDENCY_JOURNAL_PATH:-}" \
+        "${DEPENDENCY_BEFORE_PACKAGES_PATH:-}" \
+        "${DEPENDENCY_PLANNED_PACKAGES_PATH:-}"; do
+        [[ -n $path && -f $path ]] && rm -f -- "$path"
+    done
     if [[ -n ${DEPENDENCY_JOURNAL_DIR:-} && -d $DEPENDENCY_JOURNAL_DIR ]]; then
         rmdir -- "$DEPENDENCY_JOURNAL_DIR" 2>/dev/null || true
     fi
 
     DEPENDENCY_JOURNAL_PATH=''
     DEPENDENCY_JOURNAL_DIR=''
+    DEPENDENCY_BEFORE_PACKAGES_PATH=''
+    DEPENDENCY_PLANNED_PACKAGES_PATH=''
     DEPENDENCY_ADDED_PACKAGES=()
     DEPENDENCY_UPDATED_PACKAGES=()
     DEPENDENCY_REQUESTED_PACKAGES=()
+    DEPENDENCY_CLEANUP_STATUS='NOT_REQUIRED'
 }
 
 package_installed() {
@@ -54,24 +65,37 @@ installed_package_versions() {
 }
 
 create_dependency_journal() {
+    local before_snapshot=$1
     local package
 
     DEPENDENCY_JOURNAL_DIR=$(mktemp -d "${TMPDIR:-/tmp}/vpschecker-deps.XXXXXX") || return 1
     DEPENDENCY_JOURNAL_PATH="$DEPENDENCY_JOURNAL_DIR/changes.tsv"
+    DEPENDENCY_BEFORE_PACKAGES_PATH="$DEPENDENCY_JOURNAL_DIR/before-packages.txt"
+    DEPENDENCY_PLANNED_PACKAGES_PATH="$DEPENDENCY_JOURNAL_DIR/planned-packages.txt"
+    printf '%s\n' "$before_snapshot" > "$DEPENDENCY_BEFORE_PACKAGES_PATH" || return 1
+    : > "$DEPENDENCY_PLANNED_PACKAGES_PATH" || return 1
     for package in "${DEPENDENCY_REQUESTED_PACKAGES[@]}"; do
         printf 'requested\t%s\n' "$package"
     done > "$DEPENDENCY_JOURNAL_PATH"
 }
 
-record_package_changes() {
-    local before_snapshot=$1
-    local before_versions=$2
-    local after_snapshot after_versions added updated package old_version new_version
+calculate_planned_additions() {
+    local current_snapshot
 
-    after_snapshot=$(installed_package_names) || return 1
-    added=$(comm -13 \
-        <(printf '%s\n' "$before_snapshot" | LC_ALL=C sort -u) \
-        <(printf '%s\n' "$after_snapshot" | LC_ALL=C sort -u)) || return 1
+    [[ -f ${DEPENDENCY_BEFORE_PACKAGES_PATH:-} ]] || return 1
+    [[ -f ${DEPENDENCY_PLANNED_PACKAGES_PATH:-} ]] || return 1
+    current_snapshot=$(installed_package_names) || return 1
+    comm -13 \
+        <(LC_ALL=C sort -u "$DEPENDENCY_BEFORE_PACKAGES_PATH") \
+        <(printf '%s\n' "$current_snapshot" | LC_ALL=C sort -u) \
+        | comm -12 - <(LC_ALL=C sort -u "$DEPENDENCY_PLANNED_PACKAGES_PATH")
+}
+
+record_package_changes() {
+    local before_versions=$1
+    local after_versions added updated package old_version new_version
+
+    added=$(calculate_planned_additions) || return 1
 
     DEPENDENCY_ADDED_PACKAGES=()
     while IFS= read -r package; do
@@ -109,10 +133,22 @@ run_apt_get() {
 
     uid=$(id -u 2>/dev/null) || return 1
     if [[ $uid == 0 ]]; then
-        DEBIAN_FRONTEND=noninteractive apt-get "$@"
+        LC_ALL=C DEBIAN_FRONTEND=noninteractive apt-get "$@"
     else
-        sudo env DEBIAN_FRONTEND=noninteractive apt-get "$@"
+        sudo env LC_ALL=C DEBIAN_FRONTEND=noninteractive apt-get "$@"
     fi
+}
+
+plan_dependency_installation() {
+    local simulation
+
+    simulation=$(run_apt_get --simulate --no-remove install -y --no-install-recommends \
+        "${DEPENDENCY_REQUESTED_PACKAGES[@]}") || return 1
+    if printf '%s\n' "$simulation" | awk '$1 == "Remv" { found = 1 } END { exit !found }'; then
+        return 1
+    fi
+    printf '%s\n' "$simulation" | awk '$1 == "Inst" { print $2 }' \
+        | LC_ALL=C sort -u > "$DEPENDENCY_PLANNED_PACKAGES_PATH"
 }
 
 install_missing_dependencies() {
@@ -135,7 +171,7 @@ install_missing_dependencies() {
         printf 'Error: could not snapshot installed package versions.\n' >&2
         return 1
     }
-    create_dependency_journal || {
+    create_dependency_journal "$before_snapshot" || {
         printf 'Error: could not create the dependency change journal.\n' >&2
         return 1
     }
@@ -146,12 +182,17 @@ install_missing_dependencies() {
         return 1
     }
 
+    plan_dependency_installation || {
+        printf 'Error: could not determine the dependency installation plan.\n' >&2
+        return 1
+    }
+
     printf 'Installing missing packages...\n'
     install_status=0
-    run_apt_get install -y --no-install-recommends \
+    run_apt_get --no-remove install -y --no-install-recommends \
         "${DEPENDENCY_REQUESTED_PACKAGES[@]}" || install_status=$?
 
-    record_package_changes "$before_snapshot" "$before_versions" || {
+    record_package_changes "$before_versions" || {
         printf 'Error: could not record dependency changes.\n' >&2
         return 1
     }
@@ -175,6 +216,109 @@ install_missing_dependencies() {
         printf 'Updated existing packages (not scheduled for rollback): %s\n' \
             "${DEPENDENCY_UPDATED_PACKAGES[*]}"
     fi
+}
+
+refresh_added_dependencies() {
+    local added package
+
+    added=$(calculate_planned_additions) || return 1
+    DEPENDENCY_ADDED_PACKAGES=()
+    while IFS= read -r package; do
+        [[ -n $package ]] && DEPENDENCY_ADDED_PACKAGES+=("$package")
+    done <<< "$added"
+}
+
+defer_added_dependencies() {
+    DEPENDENCY_CLEANUP_STATUS='NOT_REQUIRED'
+    [[ -n ${DEPENDENCY_JOURNAL_DIR:-} ]] || return 0
+    refresh_added_dependencies || {
+        DEPENDENCY_CLEANUP_STATUS='FAILED'
+        printf 'Warning: could not determine which packages were added; automatic cleanup remains disabled.\n' >&2
+        return 1
+    }
+    (( ${#DEPENDENCY_ADDED_PACKAGES[@]} > 0 )) || return 0
+    DEPENDENCY_CLEANUP_STATUS='DEFERRED'
+}
+
+is_valid_package_name() {
+    [[ $1 =~ ^[a-z0-9][a-z0-9+.-]*(:[a-z0-9]+)?$ ]]
+}
+
+cleanup_package_list() {
+    local ask_confirmation=$1
+    local package existing answer simulation removals expected
+    local -a cleanup_packages=()
+    shift
+
+    for package in "$@"; do
+        is_valid_package_name "$package" || {
+            DEPENDENCY_CLEANUP_STATUS='FAILED'
+            printf 'Warning: invalid package name in the cleanup plan: %s\n' "$package" >&2
+            return 1
+        }
+        package_installed "$package" || continue
+        if (( ${#cleanup_packages[@]} > 0 )); then
+            for existing in "${cleanup_packages[@]}"; do
+                [[ $existing != "$package" ]] || continue 2
+            done
+        fi
+        cleanup_packages+=("$package")
+    done
+
+    if (( ${#cleanup_packages[@]} == 0 )); then
+        DEPENDENCY_CLEANUP_STATUS='NOT_REQUIRED'
+        printf '\nCleanup: none of the listed APT packages are installed.\n'
+        return 0
+    fi
+
+    simulation=$(run_apt_get --simulate -o APT::Get::AutomaticRemove=false \
+        remove -y "${cleanup_packages[@]}" 2>&1) || {
+        DEPENDENCY_CLEANUP_STATUS='FAILED'
+        printf 'Warning: APT could not simulate dependency cleanup; no packages were removed.\n' >&2
+        return 1
+    }
+    removals=$(printf '%s\n' "$simulation" | awk '$1 == "Remv" { print $2 }' | LC_ALL=C sort -u)
+    expected=$(printf '%s\n' "${cleanup_packages[@]}" | LC_ALL=C sort -u)
+    if [[ $removals != "$expected" ]] \
+        || printf '%s\n' "$simulation" | awk '$1 == "Inst" || $1 == "Conf" { found = 1 } END { exit !found }'; then
+        DEPENDENCY_CLEANUP_STATUS='SKIPPED_UNSAFE'
+        printf 'Warning: the APT cleanup plan is not limited to the recorded removal set; cleanup was skipped.\n' >&2
+        return 1
+    fi
+
+    if (( ask_confirmation == 1 )); then
+        printf 'Packages selected for removal: %s\n' "${cleanup_packages[*]}"
+        printf 'Remove exactly these packages? [y/N] '
+        if ! read -r answer; then
+            answer=''
+        fi
+        case $answer in
+            y|Y|yes|YES|Yes) ;;
+            *)
+                DEPENDENCY_CLEANUP_STATUS='DEFERRED'
+                printf 'Package cleanup cancelled.\n' >&2
+                return 1
+                ;;
+        esac
+    fi
+
+    printf '\nCleanup: removing packages added by this run: %s\n' "${cleanup_packages[*]}"
+    run_apt_get -o APT::Get::AutomaticRemove=false remove -y \
+        "${cleanup_packages[@]}" || {
+        DEPENDENCY_CLEANUP_STATUS='FAILED'
+        printf 'Warning: APT could not remove all packages added by this run.\n' >&2
+        return 1
+    }
+    for package in "${cleanup_packages[@]}"; do
+        if package_installed "$package"; then
+            DEPENDENCY_CLEANUP_STATUS='FAILED'
+            printf 'Warning: package remains installed after cleanup: %s\n' "$package" >&2
+            return 1
+        fi
+    done
+
+    DEPENDENCY_CLEANUP_STATUS='REMOVED'
+    printf 'Dependency cleanup completed; existing package updates were kept.\n'
 }
 
 ensure_dependencies() {

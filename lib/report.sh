@@ -22,7 +22,11 @@ build_report_json() {
     local vless_listener=$6
     local hysteria2_listener=$7
     local generated_at=$8
-    local added_packages requested_packages updated_packages
+    local cleanup_requested=${9:-0}
+    local added_packages requested_packages updated_packages cleanup_requested_json
+
+    cleanup_requested_json=false
+    (( cleanup_requested == 1 )) && cleanup_requested_json=true
 
     if (( ${#DEPENDENCY_ADDED_PACKAGES[@]} > 0 )); then
         added_packages=$(jq -n '$ARGS.positional' --args "${DEPENDENCY_ADDED_PACKAGES[@]}") || return 1
@@ -48,6 +52,7 @@ build_report_json() {
         --argjson hysteria2_port "$hysteria2_port" \
         --arg vless_listener "$vless_listener" \
         --arg hysteria2_listener "$hysteria2_listener" \
+        --argjson cleanup_requested "$cleanup_requested_json" \
         --arg ipquality_version "$IPQUALITY_VERSION" \
         --arg ipquality_commit "$IPQUALITY_COMMIT" \
         --argjson added_packages "$added_packages" \
@@ -240,14 +245,15 @@ build_report_json() {
                     reports_preserved: true
                 },
                 packages: {
+                    automatic_cleanup_requested: $cleanup_requested,
                     requested: $requested_packages,
                     added: $added_packages,
                     updated_existing_not_rolled_back: $updated_packages,
                     removal_status: (if ($added_packages | length) > 0
-                        then "NOT_PERFORMED"
+                        then (if $cleanup_requested then "SCHEDULED" else "DEFERRED" end)
                         else "NOT_REQUIRED"
                         end),
-                    note: "Package removal is not included until the cleanup step is implemented."
+                    note: "Existing package updates are kept. Deferred packages can be removed with vps-check.sh cleanup."
                 }
             }
           }
@@ -309,7 +315,7 @@ generate_reports() {
     local hysteria2_port=$4
     local vless_listener=$5
     local hysteria2_listener=$6
-    local print_report=${7:-0}
+    local cleanup_requested=${7:-0}
     local generated_at report_id json_path text_path json_temp text_temp path
 
     for path in "$IPQUALITY_JSON_PATH" "$VPN_TRUST_JSON_PATH" "$CHECK_HOST_JSON_PATH"; do
@@ -337,7 +343,8 @@ generate_reports() {
     REPORT_TEMP_PATHS+=("$text_temp")
 
     build_report_json "$json_temp" "$ip" "$target_country" "$vless_port" \
-        "$hysteria2_port" "$vless_listener" "$hysteria2_listener" "$generated_at" || return 1
+        "$hysteria2_port" "$vless_listener" "$hysteria2_listener" "$generated_at" \
+        "$cleanup_requested" || return 1
     build_text_report "$json_temp" "$text_temp" || return 1
     chmod 0600 "$json_temp" "$text_temp" || return 1
     mv -- "$json_temp" "$json_path" || return 1
@@ -349,6 +356,15 @@ generate_reports() {
     REPORT_TEMP_PATHS=()
     REPORT_JSON_PATH=$json_path
     REPORT_TEXT_PATH=$text_path
+}
+
+present_reports() {
+    local print_report=${1:-0}
+
+    [[ -f ${REPORT_JSON_PATH:-} && -f ${REPORT_TEXT_PATH:-} ]] || {
+        printf 'Error: final reports are unavailable.\n' >&2
+        return 1
+    }
     if (( print_report == 1 )); then
         printf '\n'
         cat -- "$REPORT_TEXT_PATH" || return 1

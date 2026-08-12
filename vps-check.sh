@@ -13,6 +13,8 @@ readonly SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 . "$SCRIPT_DIR/lib/check_host.sh"
 # shellcheck source=lib/report.sh
 . "$SCRIPT_DIR/lib/report.sh"
+# shellcheck source=lib/cleanup.sh
+. "$SCRIPT_DIR/lib/cleanup.sh"
 
 readonly EXIT_USAGE=2
 readonly DEFAULT_VLESS_PORT=443
@@ -24,19 +26,13 @@ readonly -a CHECKED_COMMANDS=(curl sha256sum jq bc nc dig ip ss dpkg-query apt-g
 PREFLIGHT_EXTERNAL_IPV4=''
 VLESS_LISTENER_STATE='unknown'
 HYSTERIA2_LISTENER_STATE='unknown'
-
-cleanup_runtime() {
-    cleanup_report_temp
-    cleanup_dependency_journal
-    cleanup_reputation_temp
-    cleanup_check_host_temp
-    cleanup_ipquality_temp
-}
+VPSCHECK_COMMAND_PATH="$SCRIPT_DIR/vps-check.sh"
 
 usage() {
     cat <<'EOF'
 Usage:
-  vps-check.sh [--ip IPV4] [--country CODE] [--vless-port PORT] [--hysteria2-port PORT] [--print-report]
+  vps-check.sh [--ip IPV4] [--country CODE] [--vless-port PORT] [--hysteria2-port PORT] [--print-report] [--cleanup]
+  vps-check.sh cleanup
 
 Options:
   --ip IPV4              VPS IPv4 address. Omit to auto-detect it.
@@ -44,6 +40,7 @@ Options:
   --vless-port PORT      VLESS TCP port (default: 443).
   --hysteria2-port PORT  Hysteria2 UDP port (default: 443).
   --print-report          Also print the text report to the terminal.
+  --cleanup               Remove pending VPSChecker APT packages on exit.
   -h, --help             Show this help.
 EOF
 }
@@ -257,6 +254,20 @@ main() {
     local hysteria2_port_seen=0
     local print_report=0
     local print_report_seen=0
+    local cleanup_requested=0
+    local cleanup_seen=0
+
+    set_cleanup_plan_path
+    if [[ ${1:-} == cleanup ]]; then
+        shift
+        if [[ ${1:-} == -h || ${1:-} == --help ]]; then
+            (( $# == 1 )) || fail_usage 'The cleanup help command does not accept additional arguments.'
+            cleanup_usage
+            return 0
+        fi
+        run_dependency_cleanup_command "$@"
+        return
+    fi
 
     while (( $# > 0 )); do
         case $1 in
@@ -294,6 +305,12 @@ main() {
                 print_report_seen=1
                 shift
                 ;;
+            --cleanup)
+                (( cleanup_seen == 0 )) || fail_usage 'Option --cleanup was provided more than once.'
+                cleanup_requested=1
+                cleanup_seen=1
+                shift
+                ;;
             -h|--help)
                 usage
                 return 0
@@ -324,7 +341,13 @@ main() {
     printf 'Target country: %s\n' "$country"
     printf 'VLESS TCP port: %s\n' "$vless_port"
     printf 'Hysteria2 UDP port: %s\n' "$hysteria2_port"
+    if (( cleanup_requested == 1 )); then
+        printf 'Automatic package cleanup: enabled\n'
+    else
+        printf 'Automatic package cleanup: disabled\n'
+    fi
 
+    AUTO_CLEANUP_REQUESTED=$cleanup_requested
     trap cleanup_runtime EXIT
     trap 'exit 129' HUP
     trap 'exit 130' INT
@@ -348,7 +371,10 @@ main() {
     evaluate_vpn_trust "$IPQUALITY_JSON_PATH" || return 1
     run_check_host "$ip" "$vless_port" "$hysteria2_port" "$country" || return 1
     generate_reports "$ip" "$country" "$vless_port" "$hysteria2_port" \
-        "$VLESS_LISTENER_STATE" "$HYSTERIA2_LISTENER_STATE" "$print_report"
+        "$VLESS_LISTENER_STATE" "$HYSTERIA2_LISTENER_STATE" "$cleanup_requested" || return 1
+    cleanup_runtime 0
+    present_reports "$print_report" || return 1
+    (( RUNTIME_CLEANUP_FAILED == 0 ))
 }
 
 if [[ ${BASH_SOURCE[0]} == "$0" ]]; then

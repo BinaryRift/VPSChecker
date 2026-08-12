@@ -81,14 +81,19 @@ test_installs_only_missing_packages_and_journals_changes() (
     }
     apt-get() {
         printf '%s\n' "$*" >> "$apt_log"
-        if [[ $1 == install ]]; then
+        if [[ $1 == --simulate && $2 == --no-remove ]]; then
+            printf '%s\n' \
+                'Inst jq (1.0 test [amd64])' \
+                'Inst bc (1.0 test [amd64])' \
+                'Inst libjq1 (1.0 test [amd64])'
+        elif [[ $1 == --no-remove ]]; then
             install_completed=1
         fi
     }
 
     ensure_dependencies <<< y >/dev/null || return 1
     journal=$(< "$DEPENDENCY_JOURNAL_PATH")
-    [[ $(< "$apt_log") == $'update\ninstall -y --no-install-recommends jq bc' ]] || return 1
+    [[ $(< "$apt_log") == $'update\n--simulate --no-remove install -y --no-install-recommends jq bc\n--no-remove install -y --no-install-recommends jq bc' ]] || return 1
     [[ $journal == *$'requested\tjq'* && $journal == *$'requested\tbc'* ]] || return 1
     [[ $journal == *$'added\tjq'* && $journal == *$'added\tbc'* ]] || return 1
     [[ $journal == *$'added\tlibjq1'* ]] || return 1
@@ -96,7 +101,105 @@ test_installs_only_missing_packages_and_journals_changes() (
 
     cleanup_dependency_journal
     ensure_dependencies >/dev/null || return 1
-    [[ $(< "$apt_log") == $'update\ninstall -y --no-install-recommends jq bc' ]]
+    [[ $(< "$apt_log") == $'update\n--simulate --no-remove install -y --no-install-recommends jq bc\n--no-remove install -y --no-install-recommends jq bc' ]]
+)
+
+test_removes_only_packages_added_by_this_run() (
+    local test_temp apt_log
+    local removal_completed=0
+
+    test_temp=$(mktemp -d)
+    TMPDIR=$test_temp
+    apt_log="$test_temp/apt.log"
+    trap 'cleanup_dependency_journal; rm -f -- "$apt_log"; rmdir -- "$test_temp" 2>/dev/null || true' EXIT
+    DEPENDENCY_REQUESTED_PACKAGES=(jq)
+    create_dependency_journal $'base-system\ncurl' || return 1
+    printf '%s\n' jq libjq1 > "$DEPENDENCY_PLANNED_PACKAGES_PATH"
+
+    id() {
+        printf '0\n'
+    }
+    dpkg-query() {
+        local package=${*: -1}
+
+        if [[ $* == *'${binary:Package}'* ]]; then
+            printf '%s\n' base-system curl
+            (( removal_completed == 1 )) || printf '%s\n' jq libjq1
+            return 0
+        fi
+        case $package in
+            jq|libjq1)
+                (( removal_completed == 0 )) || return 1
+                printf 'install ok installed'
+                ;;
+            *) printf 'install ok installed' ;;
+        esac
+    }
+    apt-get() {
+        printf '%s\n' "$*" >> "$apt_log"
+        if [[ $1 == --simulate ]]; then
+            printf '%s\n' 'Remv jq [1.0]' 'Remv libjq1 [1.0]'
+        else
+            removal_completed=1
+        fi
+    }
+
+    defer_added_dependencies >/dev/null || return 1
+    cleanup_package_list 0 "${DEPENDENCY_ADDED_PACKAGES[@]}" >/dev/null || return 1
+    [[ $DEPENDENCY_CLEANUP_STATUS == REMOVED ]] || return 1
+    [[ ${DEPENDENCY_ADDED_PACKAGES[*]} == 'jq libjq1' ]] || return 1
+    [[ $(< "$apt_log") == $'--simulate -o APT::Get::AutomaticRemove=false remove -y jq libjq1\n-o APT::Get::AutomaticRemove=false remove -y jq libjq1' ]]
+)
+
+test_skips_cleanup_when_apt_would_remove_an_existing_package() (
+    local test_temp apt_log
+
+    test_temp=$(mktemp -d)
+    TMPDIR=$test_temp
+    apt_log="$test_temp/apt.log"
+    trap 'cleanup_dependency_journal; rm -f -- "$apt_log"; rmdir -- "$test_temp" 2>/dev/null || true' EXIT
+    DEPENDENCY_REQUESTED_PACKAGES=(jq)
+    create_dependency_journal 'base-system' || return 1
+    printf '%s\n' jq > "$DEPENDENCY_PLANNED_PACKAGES_PATH"
+
+    id() {
+        printf '0\n'
+    }
+    dpkg-query() {
+        if [[ $* == *'${binary:Package}'* ]]; then
+            printf '%s\n' base-system jq
+        else
+            printf 'install ok installed'
+        fi
+    }
+    apt-get() {
+        printf '%s\n' "$*" >> "$apt_log"
+        printf '%s\n' 'Remv jq [1.0]' 'Remv base-system [1.0]'
+    }
+
+    defer_added_dependencies >/dev/null || return 1
+    ! cleanup_package_list 0 "${DEPENDENCY_ADDED_PACKAGES[@]}" >/dev/null 2>&1 || return 1
+    [[ $DEPENDENCY_CLEANUP_STATUS == SKIPPED_UNSAFE ]] || return 1
+    [[ $(wc -l < "$apt_log") -eq 1 ]]
+)
+
+test_rejects_install_plan_that_removes_packages() (
+    local test_temp
+
+    test_temp=$(mktemp -d)
+    TMPDIR=$test_temp
+    trap 'cleanup_dependency_journal; rmdir -- "$test_temp" 2>/dev/null || true' EXIT
+    DEPENDENCY_REQUESTED_PACKAGES=(jq)
+    create_dependency_journal 'base-system' || return 1
+
+    id() {
+        printf '0\n'
+    }
+    apt-get() {
+        printf '%s\n' 'Remv base-system [1.0]' 'Inst jq (1.0 test [amd64])'
+    }
+
+    ! plan_dependency_installation
 )
 
 test_decline_makes_no_changes() (
@@ -114,6 +217,9 @@ test_decline_makes_no_changes() (
 
 run_test 'skips APT when every dependency is installed' test_skips_install_when_dependencies_exist
 run_test 'installs only missing packages and records all package changes' test_installs_only_missing_packages_and_journals_changes
+run_test 'removes only packages added by this run' test_removes_only_packages_added_by_this_run
+run_test 'skips cleanup when APT would remove an existing package' test_skips_cleanup_when_apt_would_remove_an_existing_package
+run_test 'rejects an install plan that removes existing packages' test_rejects_install_plan_that_removes_packages
 run_test 'does not invoke APT when installation is declined' test_decline_makes_no_changes
 
 printf '\n%s passed, %s failed\n' "$passed" "$failed"

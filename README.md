@@ -29,6 +29,15 @@ If required APT packages are missing, VPSChecker lists them and asks for
 confirmation before running `apt-get update` and installing only those packages
 without recommendations. It never runs a system upgrade or `autoremove`.
 
+By default, packages added by VPSChecker are kept and recorded in
+`.vpschecker-cleanup.plan` in the current directory. The terminal prints a command
+that can remove the accumulated packages later. Pass `--cleanup` to remove them
+automatically at exit. Existing packages and any versions updated during
+installation are always kept.
+
+Both cleanup modes first run an APT simulation and continue only when no package
+outside the recorded set would be affected. They never use `autoremove`.
+
 ## Temporary files
 
 Runtime files are created under `${TMPDIR}` or `/tmp` when `TMPDIR` is unset.
@@ -36,6 +45,9 @@ IPQuality source and runtime copies, raw JSON, diagnostics, the VPN trust result
 and Check-Host responses are stored in a `vpschecker.XXXXXX` directory. APT
 change tracking uses a separate `vpschecker-deps.XXXXXX` directory. Both are
 removed on normal exit and handled termination signals.
+
+`.vpschecker-cleanup.plan` is not a temporary runtime file. It remains until the
+recorded packages are removed successfully.
 
 ## Reports
 
@@ -49,7 +61,9 @@ replacement advice, regional reachability, ports, protocol checks, and cleanup.
 It also embeds the unchanged raw IPQuality result. Replacement advice is reported
 as `REPLACEMENT_JUSTIFIED`, `REPLACEMENT_MAY_HELP`, `REPLACEMENT_UNLIKELY`, or
 `INCONCLUSIVE`, with supporting reasons and facts. Final reports are preserved;
-only temporary runtime files are removed on exit.
+only temporary runtime files are removed on exit. The cleanup section records
+whether added packages were deferred, removed, not required, skipped as unsafe,
+or could not be removed.
 
 ## Requirements
 
@@ -89,6 +103,20 @@ Also print the text report to the terminal while keeping both report files:
 ./vps-check.sh --print-report
 ```
 
+Automatically execute the pending cleanup plan after the checks:
+
+```bash
+./vps-check.sh --cleanup
+```
+
+Without that flag, run the printed command later from the same directory:
+
+```bash
+./vps-check.sh cleanup
+```
+
+The standalone command shows the exact packages and asks for confirmation.
+
 List the country codes currently available through Check-Host:
 
 ```bash
@@ -126,5 +154,6 @@ bash tests/reputation_test.sh
 bash tests/check_host_test.sh
 bash tests/list_check_host_locations_test.sh
 bash tests/report_test.sh
+bash tests/cleanup_test.sh
 bash tests/update_ipquality_test.sh
 ```
