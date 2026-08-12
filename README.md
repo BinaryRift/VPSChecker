@@ -13,6 +13,10 @@ Reputation, regional reachability, and service state are reported separately.
 The utility is intended to leave minimal changes on the VPS and uses pinned,
 checksum-verified versions of third-party tools.
 
+IP reputation data is collected with a pinned `xykt/IPQuality` version in IPv4
+JSON/privacy mode. Its dependency installer is disabled, and successful raw JSON
+is kept unchanged for report generation.
+
 If required APT packages are missing, VPSChecker lists them and asks for
 confirmation before running `apt-get update` and installing only those packages
 without recommendations. It never runs a system upgrade or `autoremove`.
@@ -71,5 +75,6 @@ bash tests/cli_test.sh
 bash tests/preflight_test.sh
 bash tests/dependencies_test.sh
 bash tests/ipquality_download_test.sh
+bash tests/ipquality_run_test.sh
 bash tests/update_ipquality_test.sh
 ```

@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+set -u
+
+file=''
+for argument in "$@"; do
+    file=$argument
+done
+
+grep -q '^{' "$file" && grep -q '}$' "$file"

@@ -20,7 +20,11 @@ if [[ -z $output_file ]]; then
     exit 0
 fi
 
-printf 'mock IPQuality source\n' > "$output_file"
+printf '%s\n' \
+    '#!/usr/bin/env bash' \
+    '# Runtime resource example: ${rawgithub}main/ref/example.json' \
+    "printf '{\"Head\":{\"IP\":\"203.0.113.10\"},\"Info\":{},\"Score\":{},\"Factor\":{}}\\n'" \
+    > "$output_file"
 if [[ -n ${VPSCHECK_MOCK_PATH_LOG:-} ]]; then
     printf '%s\n' "$output_file" > "$VPSCHECK_MOCK_PATH_LOG"
 fi

@@ -40,14 +40,17 @@ test_verified_download() (
             fi
             shift
         done
-        printf 'downloaded source\n' > "$output_file"
+        printf '#!/bin/bash\nurl="${rawgithub}main/ref/example.json"\n' > "$output_file"
     }
     sha256sum() {
         printf '%s  %s\n' "$IPQUALITY_SHA256" "$2"
     }
 
     prepare_ipquality >/dev/null || return 1
+    [[ -f $IPQUALITY_SOURCE_PATH ]] || return 1
     [[ -f $IPQUALITY_SCRIPT_PATH ]] || return 1
+    grep -qF "\${rawgithub}$IPQUALITY_COMMIT/ref/example.json" "$IPQUALITY_SCRIPT_PATH" || return 1
+    ! grep -qF '${rawgithub}main/' "$IPQUALITY_SCRIPT_PATH" || return 1
     temp_dir=$IPQUALITY_TEMP_DIR
     cleanup_ipquality_temp
     [[ -z $IPQUALITY_TEMP_DIR && -z $IPQUALITY_SCRIPT_PATH && ! -e $temp_dir ]]
@@ -85,7 +88,7 @@ test_checksum_mismatch_cleans_temp() (
             fi
             shift
         done
-        printf 'tampered source\n' > "$created_path"
+        printf '#!/bin/bash\nurl="${rawgithub}main/ref/tampered.json"\n' > "$created_path"
     }
     sha256sum() {
         printf '%064d  %s\n' 0 "$2"

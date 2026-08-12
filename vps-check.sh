@@ -291,7 +291,8 @@ main() {
             return 1
         fi
     fi
-    prepare_ipquality
+    prepare_ipquality || return 1
+    run_ipquality
 }
 
 if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
