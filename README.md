@@ -218,3 +218,8 @@ installation are always kept.
 
 Both cleanup modes first run an APT simulation and continue only when no package
 outside the recorded set would be affected. They never use `autoremove`.
+
+## License
+
+VPSChecker is licensed under the [MIT License](LICENSE). Third-party software
+keeps its own license; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

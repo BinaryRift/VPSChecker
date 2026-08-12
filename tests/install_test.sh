@@ -28,6 +28,8 @@ create_release_assets() {
     local archive_path="$root_directory/assets/vpschecker.tar.gz"
     local path checksum
     local -a required_files=(
+        LICENSE
+        THIRD_PARTY_NOTICES.md
         VERSION
         vps-check.sh
         lib/check_host.sh

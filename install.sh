@@ -62,6 +62,8 @@ validate_runtime_files() {
     local source_directory=$1
     local path
     local -a required_files=(
+        LICENSE
+        THIRD_PARTY_NOTICES.md
         VERSION
         vps-check.sh
         lib/check_host.sh
