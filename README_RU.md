@@ -17,7 +17,10 @@ VPSChecker — небольшая терминальная утилита для
 закреплённого commit и проверяет SHA-256. IPQuality запускается для IPv4 с полным
 локальным JSON, privacy mode и отключённой установкой зависимостей. Успешный
 исходный JSON не преобразуется и хранится во временном каталоге текущего запуска.
-Его разбор и формирование оценки относятся к следующему шагу.
+На его основе отдельно формируется оценка пригодности IP для VPN: `OK`, `WARNING`,
+`POOR` или `UNKNOWN`, с конкретными причинами. Признаки хостинга и почтовая
+репутация на эту оценку не влияют. При `WARNING` и `POOR` добавляются ссылки для
+ручной перепроверки IP.
 
 Если отсутствуют необходимые APT-пакеты, VPSChecker показывает их список и
 запрашивает подтверждение. После подтверждения выполняется `apt-get update`,
@@ -60,5 +63,6 @@ bash tests/preflight_test.sh
 bash tests/dependencies_test.sh
 bash tests/ipquality_download_test.sh
 bash tests/ipquality_run_test.sh
+bash tests/reputation_test.sh
 bash tests/update_ipquality_test.sh
 ```

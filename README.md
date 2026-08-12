@@ -15,7 +15,9 @@ checksum-verified versions of third-party tools.
 
 IP reputation data is collected with a pinned `xykt/IPQuality` version in IPv4
 JSON/privacy mode. Its dependency installer is disabled, and successful raw JSON
-is kept unchanged for report generation.
+is kept unchanged. VPSChecker separately derives an `OK`, `WARNING`, `POOR`, or
+`UNKNOWN` VPN trust assessment with concrete reasons. Hosting classification and
+mail reputation do not affect this assessment.
 
 If required APT packages are missing, VPSChecker lists them and asks for
 confirmation before running `apt-get update` and installing only those packages
@@ -76,5 +78,6 @@ bash tests/preflight_test.sh
 bash tests/dependencies_test.sh
 bash tests/ipquality_download_test.sh
 bash tests/ipquality_run_test.sh
+bash tests/reputation_test.sh
 bash tests/update_ipquality_test.sh
 ```

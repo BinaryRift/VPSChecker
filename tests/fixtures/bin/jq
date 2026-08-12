@@ -3,8 +3,21 @@
 set -u
 
 file=''
+filter=''
 for argument in "$@"; do
     file=$argument
+    if [[ $argument == *vpn_trust* ]]; then
+        filter=$argument
+    fi
 done
+
+if [[ $filter == *'def numeric_value'* ]]; then
+    printf '%s\n' '{"vpn_trust":"UNKNOWN","reasons":[{"code":"INSUFFICIENT_DATA","message":"Mock result.","evidence":[]}],"manual_checks":[]}'
+    exit 0
+fi
+if [[ $filter == *'select(. == "OK"'* ]]; then
+    sed -n 's/.*"vpn_trust":"\([A-Z]*\)".*/\1/p' "$file"
+    exit 0
+fi
 
 grep -q '^{' "$file" && grep -q '}$' "$file"

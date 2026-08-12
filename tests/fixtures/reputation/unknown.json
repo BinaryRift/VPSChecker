@@ -1,0 +1,16 @@
+{
+  "Head": {"IP": "203.0.113.40"},
+  "Score": {
+    "IP2LOCATION": "null",
+    "SCAMALYTICS": "null",
+    "ipapi": "null",
+    "AbuseIPDB": "null",
+    "IPQS": "null",
+    "DBIP": "null"
+  },
+  "Factor": {},
+  "Mail": {
+    "Port25": false,
+    "DNSBlacklist": {"Total": 100, "Clean": 0, "Marked": 0, "Blacklisted": 100}
+  }
+}

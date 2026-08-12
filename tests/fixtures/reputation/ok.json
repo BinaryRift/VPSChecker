@@ -1,0 +1,27 @@
+{
+  "Head": {"IP": "203.0.113.10"},
+  "Type": {
+    "Usage": {"IPinfo": "Hosting", "ipapi": "Hosting"}
+  },
+  "Score": {
+    "IP2LOCATION": "5",
+    "SCAMALYTICS": "10",
+    "ipapi": "0.10%",
+    "AbuseIPDB": "0",
+    "IPQS": "null",
+    "DBIP": "0"
+  },
+  "Factor": {
+    "CountryCode": {"IP2LOCATION": "US", "IPinfo": "US"},
+    "Proxy": {"IP2LOCATION": false, "IPinfo": false},
+    "VPN": {"IP2LOCATION": false, "IPinfo": false},
+    "Tor": {"IP2LOCATION": false, "IPinfo": false},
+    "Server": {"IP2LOCATION": true, "IPinfo": false},
+    "Abuser": {"IP2LOCATION": false, "IPinfo": false},
+    "Robot": {"IP2LOCATION": false, "IPinfo": false}
+  },
+  "Mail": {
+    "Port25": false,
+    "DNSBlacklist": {"Total": 100, "Clean": 0, "Marked": 0, "Blacklisted": 100}
+  }
+}

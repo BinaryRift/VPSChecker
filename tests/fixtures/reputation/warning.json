@@ -1,0 +1,18 @@
+{
+  "Head": {"IP": "203.0.113.20"},
+  "Score": {
+    "IP2LOCATION": "10",
+    "SCAMALYTICS": "45",
+    "AbuseIPDB": "0"
+  },
+  "Factor": {
+    "CountryCode": {"IP2LOCATION": "US", "SCAMALYTICS": "US"},
+    "Proxy": {"IP2LOCATION": false, "SCAMALYTICS": true},
+    "VPN": {"IP2LOCATION": false, "SCAMALYTICS": false},
+    "Tor": {"IP2LOCATION": false, "SCAMALYTICS": false},
+    "Server": {"IP2LOCATION": true, "SCAMALYTICS": true},
+    "Abuser": {"IP2LOCATION": false, "SCAMALYTICS": false},
+    "Robot": {"IP2LOCATION": false, "SCAMALYTICS": false}
+  },
+  "Mail": {"DNSBlacklist": {"Blacklisted": 0}}
+}
