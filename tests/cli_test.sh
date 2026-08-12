@@ -15,15 +15,18 @@ run_case() {
     local description=$1
     local expected_status=$2
     local expected_text=$3
-    local output status run_dir report
+    local output status run_dir report report_dir
     shift 3
 
     run_dir=$(mktemp -d) || return 1
     output=$(cd "$run_dir" && PATH="$MOCK_BIN:$PATH" VPSCHECK_OS_RELEASE_FILE="$OS_RELEASE_FIXTURE" \
         "$CLI" "$@" 2>&1)
     status=$?
-    for report in "$run_dir"/vpschecker-report-*; do
-        [[ -e $report ]] && rm -f -- "$report"
+    for report_dir in "$run_dir/reports" "$run_dir/custom-reports"; do
+        for report in "$report_dir"/vpschecker-report-*; do
+            [[ -e $report ]] && rm -f -- "$report"
+        done
+        [[ -d $report_dir ]] && rmdir -- "$report_dir" 2>/dev/null || true
     done
     rmdir -- "$run_dir" 2>/dev/null || true
 
@@ -55,6 +58,10 @@ run_case 'uses Russia as the default target country' 0 'Target country: ru' \
     --ip 203.0.113.10
 run_case 'accepts and normalizes a target country' 0 'Target country: de' \
     --ip 203.0.113.10 --country DE
+run_case 'uses the default reports directory' 0 '/reports/vpschecker-report-' \
+    --ip 203.0.113.10
+run_case 'accepts a custom report directory' 0 '/custom-reports/vpschecker-report-' \
+    --ip 203.0.113.10 --report-dir custom-reports
 run_case 'prints the text report when requested' 0 'VPSChecker report' \
     --ip 203.0.113.10 --print-report
 run_case 'enables automatic package cleanup' 0 'Automatic package cleanup: enabled' \
@@ -82,6 +89,9 @@ run_case 'rejects a country name' 2 'Invalid country code' --country Germany
 run_case 'rejects a malformed country code' 2 'Invalid country code' --country r1
 run_case 'rejects a missing option value' 2 'Option --ip requires a value' --ip
 run_case 'rejects a missing country value' 2 'Option --country requires a value' --country
+run_case 'rejects a missing report directory' 2 'Option --report-dir requires a value' --report-dir
+run_case 'rejects an empty report directory' 2 'Report directory cannot be empty' \
+    --report-dir ''
 run_case 'rejects duplicate options' 2 'Option --vless-port was provided more than once' \
     --vless-port 443 --vless-port 8443 --hysteria2-port 8443
 run_case 'rejects a duplicate country option' 2 'Option --country was provided more than once' \
@@ -90,6 +100,8 @@ run_case 'rejects a duplicate print-report option' 2 'Option --print-report was 
     --print-report --print-report
 run_case 'rejects a duplicate cleanup option' 2 'Option --cleanup was provided more than once' \
     --cleanup --cleanup
+run_case 'rejects a duplicate report directory option' 2 'Option --report-dir was provided more than once' \
+    --report-dir reports --report-dir other-reports
 run_case 'rejects cleanup command arguments' 2 'cleanup command does not accept arguments' \
     cleanup jq
 run_case 'rejects unknown options' 2 'Unknown option' \

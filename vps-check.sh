@@ -13,15 +13,20 @@ readonly SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 . "$SCRIPT_DIR/lib/reputation.sh"
 # shellcheck source=lib/check_host.sh
 . "$SCRIPT_DIR/lib/check_host.sh"
+# shellcheck source=lib/report_path.sh
+. "$SCRIPT_DIR/lib/report_path.sh"
 # shellcheck source=lib/report.sh
 . "$SCRIPT_DIR/lib/report.sh"
 # shellcheck source=lib/cleanup.sh
 . "$SCRIPT_DIR/lib/cleanup.sh"
+# shellcheck source=lib/cli.sh
+. "$SCRIPT_DIR/lib/cli.sh"
 
 readonly EXIT_USAGE=2
 readonly DEFAULT_VLESS_PORT=443
 readonly DEFAULT_HYSTERIA2_PORT=443
 readonly DEFAULT_COUNTRY=ru
+readonly DEFAULT_REPORT_DIR=reports
 readonly DEFAULT_OS_RELEASE_FILE=/etc/os-release
 readonly IP_LOOKUP_URL=https://api.ipify.org
 readonly -a CHECKED_COMMANDS=(curl sha256sum jq bc nc dig ip ss dpkg-query apt-get)
@@ -29,30 +34,6 @@ PREFLIGHT_EXTERNAL_IPV4=''
 VLESS_LISTENER_STATE='unknown'
 HYSTERIA2_LISTENER_STATE='unknown'
 VPSCHECK_COMMAND_PATH="$SCRIPT_DIR/vps-check.sh"
-
-usage() {
-    cat <<'EOF'
-Usage:
-  vps-check.sh [--ip IPV4] [--country CODE] [--vless-port PORT] [--hysteria2-port PORT] [--print-report] [--cleanup]
-  vps-check.sh cleanup
-
-Options:
-  --ip IPV4              VPS IPv4 address. Omit to auto-detect it.
-  --country CODE          Check-Host target country code (default: ru).
-  --vless-port PORT      VLESS TCP port (default: 443).
-  --hysteria2-port PORT  Hysteria2 UDP port (default: 443).
-  --print-report          Also print the text report to the terminal.
-  --cleanup               Remove pending VPSChecker APT packages on exit.
-  --version               Show the VPSChecker version.
-  -h, --help             Show this help.
-EOF
-}
-
-fail_usage() {
-    printf 'Error: %s\n' "$1" >&2
-    printf 'Run %s --help for usage.\n' "${0##*/}" >&2
-    exit "$EXIT_USAGE"
-}
 
 is_ipv4() {
     local value=$1
@@ -259,6 +240,8 @@ main() {
     local print_report_seen=0
     local cleanup_requested=0
     local cleanup_seen=0
+    local report_dir=$DEFAULT_REPORT_DIR
+    local report_dir_seen=0
 
     load_tool_version "$SCRIPT_DIR/VERSION" || return 1
     set_cleanup_plan_path
@@ -309,6 +292,13 @@ main() {
                 print_report_seen=1
                 shift
                 ;;
+            --report-dir)
+                (( report_dir_seen == 0 )) || fail_usage 'Option --report-dir was provided more than once.'
+                (( $# >= 2 )) || fail_usage 'Option --report-dir requires a value.'
+                report_dir=$2
+                report_dir_seen=1
+                shift 2
+                ;;
             --cleanup)
                 (( cleanup_seen == 0 )) || fail_usage 'Option --cleanup was provided more than once.'
                 cleanup_requested=1
@@ -339,6 +329,7 @@ main() {
     country=$(normalize_country_code "$country")
     is_port "$vless_port" || fail_usage "Invalid VLESS port: $vless_port"
     is_port "$hysteria2_port" || fail_usage "Invalid Hysteria2 port: $hysteria2_port"
+    [[ -n $report_dir ]] || fail_usage 'Report directory cannot be empty.'
 
     printf 'Input valid.\n'
     if (( ip_seen == 1 )); then
@@ -349,6 +340,7 @@ main() {
     printf 'Target country: %s\n' "$country"
     printf 'VLESS TCP port: %s\n' "$vless_port"
     printf 'Hysteria2 UDP port: %s\n' "$hysteria2_port"
+    printf 'Report directory: %s\n' "$report_dir"
     if (( cleanup_requested == 1 )); then
         printf 'Automatic package cleanup: enabled\n'
     else
@@ -379,7 +371,8 @@ main() {
     evaluate_vpn_trust "$IPQUALITY_JSON_PATH" || return 1
     run_check_host "$ip" "$vless_port" "$hysteria2_port" "$country" || return 1
     generate_reports "$ip" "$country" "$vless_port" "$hysteria2_port" \
-        "$VLESS_LISTENER_STATE" "$HYSTERIA2_LISTENER_STATE" "$cleanup_requested" || return 1
+        "$VLESS_LISTENER_STATE" "$HYSTERIA2_LISTENER_STATE" "$cleanup_requested" \
+        "$report_dir" || return 1
     cleanup_runtime 0
     present_reports "$print_report" || return 1
     (( RUNTIME_CLEANUP_FAILED == 0 ))

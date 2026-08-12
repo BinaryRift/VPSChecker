@@ -322,6 +322,7 @@ generate_reports() {
     local vless_listener=$5
     local hysteria2_listener=$6
     local cleanup_requested=${7:-0}
+    local report_dir=${8:-reports}
     local generated_at report_id json_path text_path json_temp text_temp path
 
     for path in "$IPQUALITY_JSON_PATH" "$VPN_TRUST_JSON_PATH" "$CHECK_HOST_JSON_PATH"; do
@@ -334,18 +335,19 @@ generate_reports() {
     cleanup_report_temp
     REPORT_JSON_PATH=''
     REPORT_TEXT_PATH=''
+    prepare_report_directory "$report_dir" || return 1
     generated_at=$(date -u '+%Y-%m-%dT%H:%M:%SZ') || return 1
     report_id=$(date -u '+%Y%m%dT%H%M%SZ')-$$ || return 1
-    json_path="$PWD/vpschecker-report-$report_id.json"
-    text_path="$PWD/vpschecker-report-$report_id.txt"
+    json_path="$REPORT_OUTPUT_DIR/vpschecker-report-$report_id.json"
+    text_path="$REPORT_OUTPUT_DIR/vpschecker-report-$report_id.txt"
     [[ ! -e $json_path && ! -e $text_path ]] || {
         printf 'Error: report output files already exist.\n' >&2
         return 1
     }
 
-    json_temp=$(mktemp "$PWD/.vpschecker-report-json.XXXXXX") || return 1
+    json_temp=$(mktemp "$REPORT_OUTPUT_DIR/.vpschecker-report-json.XXXXXX") || return 1
     REPORT_TEMP_PATHS+=("$json_temp")
-    text_temp=$(mktemp "$PWD/.vpschecker-report-text.XXXXXX") || return 1
+    text_temp=$(mktemp "$REPORT_OUTPUT_DIR/.vpschecker-report-text.XXXXXX") || return 1
     REPORT_TEMP_PATHS+=("$text_temp")
 
     build_report_json "$json_temp" "$ip" "$target_country" "$vless_port" \

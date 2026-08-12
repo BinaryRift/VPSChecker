@@ -51,10 +51,19 @@ recorded packages are removed successfully.
 
 ## Reports
 
-Each successful run creates two private (`0600`) files in the current directory:
+Each successful run creates two private (`0600`) files under `./reports`, relative
+to the current directory:
 
-- `vpschecker-report-<UTC timestamp>-<PID>.json`;
-- `vpschecker-report-<UTC timestamp>-<PID>.txt`.
+- `reports/vpschecker-report-<UTC timestamp>-<PID>.json`;
+- `reports/vpschecker-report-<UTC timestamp>-<PID>.txt`.
+
+The directory is created only when the reports are ready to be generated. Set a
+different relative or absolute path with `--report-dir`; an existing directory's
+permissions are not changed:
+
+```bash
+./vps-check.sh --report-dir /var/lib/vpschecker/reports
+```
 
 The JSON report has stable top-level sections for reputation, VPN suitability,
 replacement advice, regional reachability, ports, protocol checks, and cleanup.
@@ -88,7 +97,8 @@ IP, and either port can be specified explicitly:
   --ip 203.0.113.10 \
   --country de \
   --vless-port 2053 \
-  --hysteria2-port 8443
+  --hysteria2-port 8443 \
+  --report-dir reports/de
 ```
 
 Show command help:

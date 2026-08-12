@@ -121,7 +121,7 @@ run_dependency_cleanup_command() {
 
 finalize_report_cleanup() {
     local package_status=$1
-    local json_temp text_temp
+    local json_temp text_temp report_dir
 
     [[ -n ${REPORT_JSON_PATH:-} || -n ${REPORT_TEXT_PATH:-} ]] || return 0
     [[ -f ${REPORT_JSON_PATH:-} && -f ${REPORT_TEXT_PATH:-} ]] || return 1
@@ -130,9 +130,10 @@ finalize_report_cleanup() {
         *) return 1 ;;
     esac
 
-    json_temp=$(mktemp "$PWD/.vpschecker-report-json.XXXXXX") || return 1
+    report_dir=${REPORT_JSON_PATH%/*}
+    json_temp=$(mktemp "$report_dir/.vpschecker-report-json.XXXXXX") || return 1
     REPORT_TEMP_PATHS+=("$json_temp")
-    text_temp=$(mktemp "$PWD/.vpschecker-report-text.XXXXXX") || return 1
+    text_temp=$(mktemp "$report_dir/.vpschecker-report-text.XXXXXX") || return 1
     REPORT_TEMP_PATHS+=("$text_temp")
 
     sed \

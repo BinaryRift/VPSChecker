@@ -14,6 +14,8 @@ DEPENDENCY_ADDED_PACKAGES=()
 DEPENDENCY_UPDATED_PACKAGES=()
 DEPENDENCY_REQUESTED_PACKAGES=()
 
+# shellcheck source=../lib/report_path.sh
+. "$PROJECT_DIR/lib/report_path.sh"
 # shellcheck source=../lib/report.sh
 . "$PROJECT_DIR/lib/report.sh"
 # shellcheck source=../lib/cleanup.sh
@@ -110,11 +112,13 @@ setup_report() {
     local network_fixture=$2
 
     REPORT_TEST_DIR=$(mktemp -d)
+    REPORT_TEST_DIR=$(cd "$REPORT_TEST_DIR" && pwd -P) || return 1
     IPQUALITY_JSON_PATH=$REPUTATION_FIXTURE
     VPN_TRUST_JSON_PATH="$REPORT_TEST_DIR/vpn.json"
     CHECK_HOST_JSON_PATH="$REPORT_FIXTURES/$network_fixture"
     REPORT_JSON_PATH=''
     REPORT_TEXT_PATH=''
+    REPORT_OUTPUT_DIR=''
     REPORT_TEMP_PATHS=()
     DEPENDENCY_ADDED_PACKAGES=()
     DEPENDENCY_UPDATED_PACKAGES=()
@@ -128,6 +132,8 @@ cleanup_report_test() {
     [[ -n ${REPORT_JSON_PATH:-} ]] && rm -f -- "$REPORT_JSON_PATH"
     [[ -n ${REPORT_TEXT_PATH:-} ]] && rm -f -- "$REPORT_TEXT_PATH"
     [[ -n ${VPN_TRUST_JSON_PATH:-} ]] && rm -f -- "$VPN_TRUST_JSON_PATH"
+    [[ -n ${REPORT_OUTPUT_DIR:-} && -d $REPORT_OUTPUT_DIR ]] \
+        && rmdir -- "$REPORT_OUTPUT_DIR" 2>/dev/null || true
     cd "$PROJECT_DIR" || true
     rmdir -- "$REPORT_TEST_DIR" 2>/dev/null || true
 }
@@ -147,6 +153,7 @@ test_stable_report_structure() (
     text_report=$(< "$REPORT_TEXT_PATH")
 
     [[ $before == "$after" && -f $REPORT_JSON_PATH && -f $REPORT_TEXT_PATH ]] || return 1
+    [[ ${REPORT_JSON_PATH%/*} == "$REPORT_TEST_DIR/reports" ]] || return 1
     [[ $text_report == *'Version: 0.1.0'* ]] || return 1
     [[ $text_report == *'VPN suitability: OK'* ]] || return 1
     [[ $text_report == *'VLESS: TRANSPORT_ONLY'* ]] || return 1
@@ -288,6 +295,41 @@ test_marks_automatic_cleanup_as_scheduled() (
     ' "$REPORT_JSON_PATH" >/dev/null
 )
 
+test_uses_custom_report_directory() (
+    setup_report ok network-ok.json
+    trap cleanup_report_test EXIT
+
+    generate_reports 203.0.113.10 ru 443 8443 listening listening 0 custom-reports || return 1
+    [[ ${REPORT_JSON_PATH%/*} == "$REPORT_TEST_DIR/custom-reports" ]] || return 1
+    [[ ${REPORT_TEXT_PATH%/*} == "$REPORT_TEST_DIR/custom-reports" ]]
+)
+
+test_uses_absolute_report_directory() (
+    local absolute_dir
+
+    setup_report ok network-ok.json
+    trap cleanup_report_test EXIT
+    absolute_dir="$REPORT_TEST_DIR/absolute-reports"
+
+    generate_reports 203.0.113.10 ru 443 8443 listening listening 0 "$absolute_dir" || return 1
+    [[ ${REPORT_JSON_PATH%/*} == "$absolute_dir" ]]
+)
+
+test_rejects_report_path_that_is_a_file() (
+    local report_file
+
+    setup_report ok network-ok.json
+    trap cleanup_report_test EXIT
+    report_file="$REPORT_TEST_DIR/report-file"
+    touch "$report_file" || return 1
+    if generate_reports 203.0.113.10 ru 443 8443 listening listening 0 "$report_file" \
+        >/dev/null 2>&1; then
+        rm -f -- "$report_file"
+        return 1
+    fi
+    rm -f -- "$report_file"
+)
+
 run_test 'creates stable JSON and text reports without changing raw IPQuality data' test_stable_report_structure
 run_test 'justifies replacement for independently confirmed poor reputation' test_poor_reputation_justifies_replacement
 run_test 'justifies replacement for a confirmed regional TCP failure' test_confirmed_regional_failure_justifies_replacement
@@ -300,6 +342,9 @@ run_test 'does not print the text report by default' test_console_output_is_disa
 run_test 'prints the text report when requested' test_console_output_can_be_enabled
 run_test 'finalizes cleanup status in both reports' test_finalizes_cleanup_status
 run_test 'marks requested automatic cleanup as scheduled' test_marks_automatic_cleanup_as_scheduled
+run_test 'uses a custom report directory' test_uses_custom_report_directory
+run_test 'uses an absolute report directory' test_uses_absolute_report_directory
+run_test 'rejects a report path that is a file' test_rejects_report_path_that_is_a_file
 
 printf '\n%s passed, %s failed\n' "$passed" "$failed"
 (( failed == 0 ))

@@ -55,10 +55,19 @@ UDP-проверка порта Hysteria2. Результат UDP обознач
 
 ## Отчёты
 
-После успешной проверки в текущем каталоге создаются два файла с правами `0600`:
+После успешной проверки в `./reports` относительно текущего каталога создаются
+два файла с правами `0600`:
 
-- `vpschecker-report-<UTC timestamp>-<PID>.json`;
-- `vpschecker-report-<UTC timestamp>-<PID>.txt`.
+- `reports/vpschecker-report-<UTC timestamp>-<PID>.json`;
+- `reports/vpschecker-report-<UTC timestamp>-<PID>.txt`.
+
+Каталог создаётся только перед непосредственным формированием отчётов. Другой
+относительный или абсолютный путь можно задать через `--report-dir`; права уже
+существующего каталога не изменяются:
+
+```bash
+./vps-check.sh --report-dir /var/lib/vpschecker/reports
+```
 
 JSON имеет стабильные разделы для репутации, пригодности IP для VPN, рекомендации
 о замене, региональной доступности, портов, протокольных проверок и очистки. В него
@@ -78,7 +87,8 @@ TCP/443 и UDP/443 соответственно. Страна задаётся �
 страну и порты можно переопределить:
 
 ```bash
-./vps-check.sh --ip 203.0.113.10 --country de --vless-port 2053 --hysteria2-port 8443
+./vps-check.sh --ip 203.0.113.10 --country de --vless-port 2053 \
+  --hysteria2-port 8443 --report-dir reports/de
 ```
 
 `--ip` можно не указывать: утилита определит внешний IPv4 через HTTPS. Явное

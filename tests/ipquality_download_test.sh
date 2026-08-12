@@ -99,7 +99,7 @@ test_checksum_mismatch_cleans_temp() (
 )
 
 test_cli_exit_trap_cleans_temp() {
-    local path_log downloaded_path output status run_dir report
+    local path_log downloaded_path output status run_dir report report_dir
 
     path_log=$(mktemp)
     run_dir=$(mktemp -d) || return 1
@@ -109,9 +109,11 @@ test_cli_exit_trap_cleans_temp() {
     status=$?
     downloaded_path=$(< "$path_log")
     rm -f "$path_log"
-    for report in "$run_dir"/vpschecker-report-*; do
+    report_dir="$run_dir/reports"
+    for report in "$report_dir"/vpschecker-report-*; do
         [[ -e $report ]] && rm -f -- "$report"
     done
+    [[ -d $report_dir ]] && rmdir -- "$report_dir" 2>/dev/null || true
     rmdir -- "$run_dir" 2>/dev/null || true
 
     [[ $status -eq 0 ]] || return 1
