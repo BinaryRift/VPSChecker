@@ -87,7 +87,7 @@ main() {
     local command_name
 
     (( $# == 0 )) || fail 'the installer does not accept arguments'
-    for command_name in curl tar sha256sum awk mktemp mkdir mv chmod rm; do
+    for command_name in curl tar gzip sha256sum awk mktemp mkdir mv chmod rm; do
         require_command "$command_name"
     done
     [[ ! -e $INSTALL_DIRECTORY && ! -L $INSTALL_DIRECTORY ]] \

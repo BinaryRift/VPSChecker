@@ -106,9 +106,25 @@ test_refuses_existing_installation() (
         && -d $test_root/work/vpschecker ]]
 )
 
+test_reports_missing_gzip() (
+    local test_root output status
+
+    test_root=$(mktemp -d)
+    trap 'rm -rf -- "$test_root"' EXIT
+    mkdir -p "$test_root/work" "$test_root/bin"
+    ln -s "$FIXTURE_BIN/curl" "$test_root/bin/curl"
+    ln -s "$(command -v tar)" "$test_root/bin/tar"
+
+    output=$(cd "$test_root/work" && \
+        PATH="$test_root/bin" /bin/bash "$PROJECT_DIRECTORY/install.sh" 2>&1)
+    status=$?
+    [[ $status -ne 0 && $output == *'required command is unavailable: gzip'* ]]
+)
+
 run_test 'installs a checksum-verified release' test_installs_verified_release
 run_test 'rejects a release with a mismatched checksum' test_rejects_checksum_mismatch
 run_test 'does not overwrite an existing installation' test_refuses_existing_installation
+run_test 'reports when gzip is unavailable' test_reports_missing_gzip
 
 printf '\n%s passed, %s failed\n' "$passed" "$failed"
 (( failed == 0 ))
