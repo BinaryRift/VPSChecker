@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+set -u
+
+output_path=''
+url=''
+
+while (( $# > 0 )); do
+    case $1 in
+        -o)
+            output_path=$2
+            shift 2
+            ;;
+        --proto|--tlsv1.2)
+            if [[ $1 == --proto ]]; then
+                shift 2
+            else
+                shift
+            fi
+            ;;
+        -*) shift ;;
+        *)
+            url=$1
+            shift
+            ;;
+    esac
+done
+
+[[ -n $output_path && -n $url ]] || exit 2
+cp -- "$INSTALL_TEST_ASSET_DIRECTORY/${url##*/}" "$output_path"
