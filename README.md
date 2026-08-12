@@ -1,33 +1,52 @@
 # VPSChecker
 
-VPSChecker — небольшая терминальная утилита для оценки пригодности VPS в качестве
-выходной VPN-ноды. Она должна проверять репутацию IP-адреса, доступность сервера
-из России и внешнюю доступность портов VLESS и Hysteria2. Репутация, региональная
-доступность и состояние сервисов оцениваются раздельно, а проверки выполняются с
-минимальными изменениями системы.
+[Русская версия](README_RU.md)
 
-Сейчас реализованы CLI, валидация параметров и read-only preflight. Preflight
-определяет ОС, текущие права, внешний IPv4, наличие нужных команд и APT-пакетов,
-а также локальные TCP/UDP listeners. Он не устанавливает пакеты и не вызывает
-`sudo`.
+VPSChecker is a small terminal utility designed to assess whether a VPS IP is
+suitable for use as a VPN exit node. It checks three independent areas:
+
+- IP reputation and trust signals;
+- reachability from Russia;
+- local and external availability of VLESS TCP and Hysteria2 UDP ports.
+
+Reputation, regional reachability, and service state are reported separately.
+The utility is intended to leave minimal changes on the VPS and uses pinned,
+checksum-verified versions of third-party tools.
+
+## Requirements
+
+- Debian or Ubuntu;
+- Bash 5.1 or newer;
+- IPv4 connectivity.
+
+## Usage
+
+Run with automatic external IPv4 detection and the default ports:
 
 ```bash
 ./vps-check.sh
 ```
 
-По умолчанию проверяются TCP/443 для VLESS и UDP/443 для Hysteria2. Любой порт можно переопределить:
+The default ports are TCP/443 for VLESS and UDP/443 for Hysteria2. The IP and
+either port can be specified explicitly:
 
 ```bash
-./vps-check.sh --ip 203.0.113.10 --vless-port 2053 --hysteria2-port 8443
+./vps-check.sh \
+  --ip 203.0.113.10 \
+  --vless-port 2053 \
+  --hysteria2-port 8443
 ```
 
-`--ip` можно не указывать: утилита определит внешний IPv4 через HTTPS. На этом
-этапе после проверки параметров выводится результат preflight; IPQuality и
-внешняя проверка портов будут добавлены далее.
+Show command help:
 
-Тесты:
+```bash
+./vps-check.sh --help
+```
+
+## Tests
 
 ```bash
 bash tests/cli_test.sh
 bash tests/preflight_test.sh
+bash tests/ipquality_download_test.sh
 ```
