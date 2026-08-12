@@ -243,7 +243,7 @@ test_conflicting_data_is_inconclusive() (
     ' "$REPORT_JSON_PATH" >/dev/null
 )
 
-test_console_output_is_disabled_by_default() (
+test_console_output_is_compact_by_default() (
     local output
 
     setup_report ok network-ok.json
@@ -251,7 +251,25 @@ test_console_output_is_disabled_by_default() (
 
     generate_reports 203.0.113.10 ru 443 8443 listening listening || return 1
     output=$(present_reports) || return 1
-    [[ $output != *'VPSChecker report'* ]]
+    [[ $output == *'Result:'* \
+        && $output == *'VPN suitability: OK'* \
+        && $output == *'Replacement advice: REPLACEMENT_UNLIKELY'* \
+        && $output != *'VPSChecker report'* \
+        && $output != *'Manual verification:'* ]]
+)
+
+test_console_output_includes_manual_checks_when_needed() (
+    local output
+
+    setup_report warning_material network-ok.json
+    trap cleanup_report_test EXIT
+
+    generate_reports 203.0.113.10 ru 443 8443 listening listening || return 1
+    output=$(present_reports) || return 1
+    [[ $output == *'VPN suitability: WARNING'* \
+        && $output == *'Replacement advice: REPLACEMENT_MAY_HELP'* \
+        && $output == *'Manual verification:'* \
+        && $output == *'Scamalytics: https://scamalytics.com/ip/203.0.113.10'* ]]
 )
 
 test_console_output_can_be_enabled() (
@@ -338,7 +356,8 @@ run_test 'does not justify replacement for VPN classification alone' test_expect
 run_test 'does not justify replacement when the local service is not listening' test_local_service_failure_does_not_justify_replacement
 run_test 'returns INCONCLUSIVE when required data is unavailable' test_missing_data_is_inconclusive
 run_test 'returns INCONCLUSIVE when reputation sources only conflict' test_conflicting_data_is_inconclusive
-run_test 'does not print the text report by default' test_console_output_is_disabled_by_default
+run_test 'prints a compact result by default' test_console_output_is_compact_by_default
+run_test 'includes manual verification links in a compact result when needed' test_console_output_includes_manual_checks_when_needed
 run_test 'prints the text report when requested' test_console_output_can_be_enabled
 run_test 'finalizes cleanup status in both reports' test_finalizes_cleanup_status
 run_test 'marks requested automatic cleanup as scheduled' test_marks_automatic_cleanup_as_scheduled

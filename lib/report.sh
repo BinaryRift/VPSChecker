@@ -376,6 +376,18 @@ present_reports() {
     if (( print_report == 1 )); then
         printf '\n'
         cat -- "$REPORT_TEXT_PATH" || return 1
+    else
+        printf '\n'
+        jq -r '
+            "Result:",
+            "  VPN suitability: \(.vpn_suitability.vpn_trust)",
+            "  Replacement advice: \(.replacement_advice.status)",
+            (if (.vpn_suitability.manual_checks | length) > 0 then
+                "",
+                "Manual verification:",
+                (.vpn_suitability.manual_checks[] | "  \(.service): \(.url)")
+             else empty end)
+        ' "$REPORT_JSON_PATH" || return 1
     fi
     printf '\nReports:\n'
     printf '  JSON: %s\n' "$REPORT_JSON_PATH"
