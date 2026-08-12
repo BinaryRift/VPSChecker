@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+set -u
+
+file=''
+for argument in "$@"; do
+    file=$argument
+done
+
+if [[ $file == *current-ip.sh ]]; then
+    checksum=$VPSCHECK_MOCK_CURRENT_SHA256
+    if [[ ${VPSCHECK_MOCK_CORRUPT_CURRENT:-0} == 1 ]]; then
+        checksum=0000000000000000000000000000000000000000000000000000000000000000
+    fi
+else
+    checksum=$VPSCHECK_MOCK_CANDIDATE_SHA256
+fi
+
+printf '%s  %s\n' "$checksum" "$file"

@@ -2,9 +2,13 @@
 
 set -u
 
+readonly SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+readonly PROJECT_DIR=$(cd "$SCRIPT_DIR/../../.." && pwd)
+
 file=''
 for argument in "$@"; do
     file=$argument
 done
 
-printf '9823c560e0d19769eb627329a31cb47da655d087166d86e40d9b6c77bc7f32fb  %s\n' "$file"
+checksum=$(sed -n 's/^readonly IPQUALITY_SHA256=//p' "$PROJECT_DIR/lib/ipquality.sh")
+printf '%s  %s\n' "$checksum" "$file"

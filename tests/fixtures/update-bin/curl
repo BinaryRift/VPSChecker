@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+
+set -u
+
+output_file=''
+while (( $# > 0 )); do
+    case $1 in
+        --output)
+            output_file=$2
+            shift 2
+            ;;
+        *)
+            shift
+            ;;
+    esac
+done
+
+count=0
+if [[ -f $VPSCHECK_MOCK_CURL_COUNT ]]; then
+    count=$(< "$VPSCHECK_MOCK_CURL_COUNT")
+fi
+(( count += 1 ))
+printf '%s\n' "$count" > "$VPSCHECK_MOCK_CURL_COUNT"
+
+if (( count == 1 )); then
+    printf '#!/bin/bash\nscript_version="%s"\nprintf "current\\n"\n' \
+        "$VPSCHECK_MOCK_CURRENT_VERSION" > "$output_file"
+else
+    printf '#!/bin/bash\nscript_version="%s"\nprintf "candidate\\n"\n' \
+        "$VPSCHECK_MOCK_CANDIDATE_VERSION" > "$output_file"
+fi

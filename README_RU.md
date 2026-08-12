@@ -31,10 +31,26 @@ IPQuality пока не запускается.
 этапе после проверки параметров выводится результат preflight; запуск IPQuality
 и внешняя проверка портов будут добавлены далее.
 
+Обновление закреплённой версии IPQuality:
+
+```bash
+./scripts/update-ipquality.sh
+```
+
+Можно проверить конкретный полный commit SHA:
+
+```bash
+./scripts/update-ipquality.sh COMMIT_SHA
+```
+
+Скрипт проверяет текущий исходный файл, загружает кандидата, показывает его
+checksum и diff, после чего запрашивает подтверждение перед изменением фиксации.
+
 Тесты:
 
 ```bash
 bash tests/cli_test.sh
 bash tests/preflight_test.sh
 bash tests/ipquality_download_test.sh
+bash tests/update_ipquality_test.sh
 ```

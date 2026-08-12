@@ -43,10 +43,28 @@ Show command help:
 ./vps-check.sh --help
 ```
 
+## Updating IPQuality
+
+Review the latest upstream change and update the pinned version:
+
+```bash
+./scripts/update-ipquality.sh
+```
+
+A full commit SHA can be reviewed instead:
+
+```bash
+./scripts/update-ipquality.sh COMMIT_SHA
+```
+
+The script verifies the current source, downloads the candidate, shows its
+checksum and diff, and asks for confirmation before changing the pin.
+
 ## Tests
 
 ```bash
 bash tests/cli_test.sh
 bash tests/preflight_test.sh
 bash tests/ipquality_download_test.sh
+bash tests/update_ipquality_test.sh
 ```
