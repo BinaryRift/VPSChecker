@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+set -u
+
+output_file=''
+while (( $# > 0 )); do
+    case $1 in
+        --output)
+            output_file=$2
+            shift 2
+            ;;
+        *)
+            shift
+            ;;
+    esac
+done
+
+if [[ -z $output_file ]]; then
+    printf '198.51.100.24\n'
+    exit 0
+fi
+
+printf 'mock IPQuality source\n' > "$output_file"
+if [[ -n ${VPSCHECK_MOCK_PATH_LOG:-} ]]; then
+    printf '%s\n' "$output_file" > "$VPSCHECK_MOCK_PATH_LOG"
+fi

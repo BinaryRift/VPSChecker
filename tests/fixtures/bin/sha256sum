@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+set -u
+
+file=''
+for argument in "$@"; do
+    file=$argument
+done
+
+printf '9823c560e0d19769eb627329a31cb47da655d087166d86e40d9b6c77bc7f32fb  %s\n' "$file"

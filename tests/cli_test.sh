@@ -6,6 +6,7 @@ readonly TEST_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 readonly PROJECT_DIR=$(cd "$TEST_DIR/.." && pwd)
 readonly CLI="$PROJECT_DIR/vps-check.sh"
 readonly OS_RELEASE_FIXTURE="$TEST_DIR/fixtures/os-release.ubuntu"
+readonly MOCK_BIN="$TEST_DIR/fixtures/bin"
 
 passed=0
 failed=0
@@ -17,7 +18,8 @@ run_case() {
     local output status
     shift 3
 
-    output=$(VPSCHECK_OS_RELEASE_FILE="$OS_RELEASE_FIXTURE" "$CLI" "$@" 2>&1)
+    output=$(PATH="$MOCK_BIN:$PATH" VPSCHECK_OS_RELEASE_FILE="$OS_RELEASE_FIXTURE" \
+        "$CLI" "$@" 2>&1)
     status=$?
 
     if [[ $status -eq $expected_status && $output == *"$expected_text"* ]]; then

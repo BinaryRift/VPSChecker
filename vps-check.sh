@@ -2,12 +2,16 @@
 
 set -u
 
+readonly SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=lib/ipquality.sh
+. "$SCRIPT_DIR/lib/ipquality.sh"
+
 readonly EXIT_USAGE=2
 readonly DEFAULT_VLESS_PORT=443
 readonly DEFAULT_HYSTERIA2_PORT=443
 readonly DEFAULT_OS_RELEASE_FILE=/etc/os-release
 readonly IP_LOOKUP_URL=https://api.ipify.org
-readonly -a CHECKED_COMMANDS=(curl jq bc nc dig ip ss dpkg-query apt-get)
+readonly -a CHECKED_COMMANDS=(curl sha256sum jq bc nc dig ip ss dpkg-query apt-get)
 readonly -a CHECKED_PACKAGES=(jq curl bc netcat-openbsd dnsutils iproute2)
 
 usage() {
@@ -261,7 +265,13 @@ main() {
     printf 'VLESS TCP port: %s\n' "$vless_port"
     printf 'Hysteria2 UDP port: %s\n' "$hysteria2_port"
 
-    run_preflight "$ip" "$vless_port" "$hysteria2_port"
+    trap cleanup_ipquality_temp EXIT
+    trap 'exit 129' HUP
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+
+    run_preflight "$ip" "$vless_port" "$hysteria2_port" || return 1
+    prepare_ipquality
 }
 
 if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
