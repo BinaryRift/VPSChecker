@@ -15,12 +15,17 @@ run_case() {
     local description=$1
     local expected_status=$2
     local expected_text=$3
-    local output status
+    local output status run_dir report
     shift 3
 
-    output=$(PATH="$MOCK_BIN:$PATH" VPSCHECK_OS_RELEASE_FILE="$OS_RELEASE_FIXTURE" \
+    run_dir=$(mktemp -d) || return 1
+    output=$(cd "$run_dir" && PATH="$MOCK_BIN:$PATH" VPSCHECK_OS_RELEASE_FILE="$OS_RELEASE_FIXTURE" \
         "$CLI" "$@" 2>&1)
     status=$?
+    for report in "$run_dir"/vpschecker-report-*; do
+        [[ -e $report ]] && rm -f -- "$report"
+    done
+    rmdir -- "$run_dir" 2>/dev/null || true
 
     if [[ $status -eq $expected_status && $output == *"$expected_text"* ]]; then
         printf 'ok - %s\n' "$description"

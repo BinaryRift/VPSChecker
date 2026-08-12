@@ -99,15 +99,20 @@ test_checksum_mismatch_cleans_temp() (
 )
 
 test_cli_exit_trap_cleans_temp() {
-    local path_log downloaded_path output status
+    local path_log downloaded_path output status run_dir report
 
     path_log=$(mktemp)
-    output=$(PATH="$MOCK_BIN:$PATH" VPSCHECK_MOCK_PATH_LOG="$path_log" \
+    run_dir=$(mktemp -d) || return 1
+    output=$(cd "$run_dir" && PATH="$MOCK_BIN:$PATH" VPSCHECK_MOCK_PATH_LOG="$path_log" \
         VPSCHECK_OS_RELEASE_FILE="$FIXTURES_DIR/os-release.ubuntu" \
         "$CLI" --ip 203.0.113.10 2>&1)
     status=$?
     downloaded_path=$(< "$path_log")
     rm -f "$path_log"
+    for report in "$run_dir"/vpschecker-report-*; do
+        [[ -e $report ]] && rm -f -- "$report"
+    done
+    rmdir -- "$run_dir" 2>/dev/null || true
 
     [[ $status -eq 0 ]] || return 1
     [[ $output == *'SHA-256: verified'* ]] || return 1

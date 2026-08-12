@@ -37,6 +37,20 @@ and Check-Host responses are stored in a `vpschecker.XXXXXX` directory. APT
 change tracking uses a separate `vpschecker-deps.XXXXXX` directory. Both are
 removed on normal exit and handled termination signals.
 
+## Reports
+
+Each successful run creates two private (`0600`) files in the current directory:
+
+- `vpschecker-report-<UTC timestamp>-<PID>.json`;
+- `vpschecker-report-<UTC timestamp>-<PID>.txt`.
+
+The JSON report has stable top-level sections for reputation, VPN suitability,
+replacement advice, regional reachability, ports, protocol checks, and cleanup.
+It also embeds the unchanged raw IPQuality result. Replacement advice is reported
+as `REPLACEMENT_JUSTIFIED`, `REPLACEMENT_MAY_HELP`, `REPLACEMENT_UNLIKELY`, or
+`INCONCLUSIVE`, with supporting reasons and facts. Final reports are preserved;
+only temporary runtime files are removed on exit.
+
 ## Requirements
 
 - Debian or Ubuntu;
@@ -105,5 +119,6 @@ bash tests/ipquality_run_test.sh
 bash tests/reputation_test.sh
 bash tests/check_host_test.sh
 bash tests/list_check_host_locations_test.sh
+bash tests/report_test.sh
 bash tests/update_ipquality_test.sh
 ```

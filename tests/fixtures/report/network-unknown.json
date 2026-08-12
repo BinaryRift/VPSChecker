@@ -1,0 +1,36 @@
+{
+  "provider": "Check-Host",
+  "provider_status": "UNKNOWN",
+  "provider_error": "Provider unavailable.",
+  "target_country": "ru",
+  "nodes": {"target_region": [], "control": []},
+  "checks": {
+    "ping": {
+      "complete": false,
+      "results": [],
+      "summary": {
+        "target_region": {"total": 0, "counts": {}, "status": "UNKNOWN"},
+        "control": {"total": 0, "counts": {}, "status": "UNKNOWN"},
+        "regional_difference": false
+      }
+    },
+    "vless_tcp": {
+      "complete": false,
+      "results": [],
+      "summary": {
+        "target_region": {"total": 0, "counts": {}, "status": "UNKNOWN"},
+        "control": {"total": 0, "counts": {}, "status": "UNKNOWN"},
+        "regional_difference": false
+      }
+    },
+    "hysteria2_udp": {
+      "complete": false,
+      "results": [],
+      "summary": {
+        "target_region": {"total": 0, "counts": {}, "status": "UNKNOWN"},
+        "control": {"total": 0, "counts": {}, "status": "UNKNOWN"},
+        "regional_difference": false
+      }
+    }
+  }
+}

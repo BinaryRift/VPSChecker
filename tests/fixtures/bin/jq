@@ -2,36 +2,9 @@
 
 set -u
 
-file=''
-filter=''
-mode=''
-for argument in "$@"; do
-    file=$argument
-    if [[ $argument == *vpn_trust* ]]; then
-        filter=$argument
-    fi
-    if [[ $argument == *'def unknown_check'* ]]; then
-        mode=check_host_unknown
-    elif [[ $argument == *'provider_status == "UNKNOWN"'* ]]; then
-        mode=check_host_summary
-    fi
-done
-
-if [[ $mode == check_host_unknown ]]; then
-    printf '%s\n' '{"provider":"Check-Host","provider_status":"UNKNOWN","provider_error":"Mock unavailable","target_country":"ru","nodes":{"target_region":[],"control":[]},"checks":{}}'
-    exit 0
-fi
-if [[ $mode == check_host_summary ]]; then
-    printf '%s\n' '  Provider: UNKNOWN (Mock unavailable)'
-    exit 0
-fi
-if [[ $filter == *'def numeric_value'* ]]; then
-    printf '%s\n' '{"vpn_trust":"UNKNOWN","reasons":[{"code":"INSUFFICIENT_DATA","message":"Mock result.","evidence":[]}],"manual_checks":[]}'
-    exit 0
-fi
-if [[ $filter == *'select(. == "OK"'* ]]; then
-    sed -n 's/.*"vpn_trust":"\([A-Z]*\)".*/\1/p' "$file"
-    exit 0
+if [[ -x /usr/bin/jq ]]; then
+    exec /usr/bin/jq "$@"
 fi
 
-grep -q '^{' "$file" && grep -q '}$' "$file"
+printf 'Error: the test suite requires jq at /usr/bin/jq.\n' >&2
+exit 127

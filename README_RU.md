@@ -41,6 +41,20 @@ UDP-проверка порта Hysteria2. Результат UDP обознач
 Журнал изменений APT создаётся отдельно в `vpschecker-deps.XXXXXX`. Оба каталога
 удаляются при обычном завершении и обработанных сигналах остановки.
 
+## Отчёты
+
+После успешной проверки в текущем каталоге создаются два файла с правами `0600`:
+
+- `vpschecker-report-<UTC timestamp>-<PID>.json`;
+- `vpschecker-report-<UTC timestamp>-<PID>.txt`.
+
+JSON имеет стабильные разделы для репутации, пригодности IP для VPN, рекомендации
+о замене, региональной доступности, портов, протокольных проверок и очистки. В него
+также без изменений включается исходный результат IPQuality. Рекомендация о замене
+принимает значение `REPLACEMENT_JUSTIFIED`, `REPLACEMENT_MAY_HELP`,
+`REPLACEMENT_UNLIKELY` или `INCONCLUSIVE` и содержит причины и подтверждающие
+факты. Итоговые отчёты сохраняются, а временные файлы удаляются при выходе.
+
 ```bash
 ./vps-check.sh
 ```
@@ -88,5 +102,6 @@ bash tests/ipquality_run_test.sh
 bash tests/reputation_test.sh
 bash tests/check_host_test.sh
 bash tests/list_check_host_locations_test.sh
+bash tests/report_test.sh
 bash tests/update_ipquality_test.sh
 ```

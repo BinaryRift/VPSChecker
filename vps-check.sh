@@ -11,6 +11,8 @@ readonly SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 . "$SCRIPT_DIR/lib/reputation.sh"
 # shellcheck source=lib/check_host.sh
 . "$SCRIPT_DIR/lib/check_host.sh"
+# shellcheck source=lib/report.sh
+. "$SCRIPT_DIR/lib/report.sh"
 
 readonly EXIT_USAGE=2
 readonly DEFAULT_VLESS_PORT=443
@@ -20,8 +22,11 @@ readonly DEFAULT_OS_RELEASE_FILE=/etc/os-release
 readonly IP_LOOKUP_URL=https://api.ipify.org
 readonly -a CHECKED_COMMANDS=(curl sha256sum jq bc nc dig ip ss dpkg-query apt-get)
 PREFLIGHT_EXTERNAL_IPV4=''
+VLESS_LISTENER_STATE='unknown'
+HYSTERIA2_LISTENER_STATE='unknown'
 
 cleanup_runtime() {
+    cleanup_report_temp
     cleanup_dependency_journal
     cleanup_reputation_temp
     cleanup_check_host_temp
@@ -176,6 +181,14 @@ listener_state() {
     fi
 }
 
+collect_listener_states() {
+    local vless_port=$1
+    local hysteria2_port=$2
+
+    VLESS_LISTENER_STATE=$(listener_state tcp "$vless_port")
+    HYSTERIA2_LISTENER_STATE=$(listener_state udp "$hysteria2_port")
+}
+
 run_preflight() {
     local requested_ip=$1
     local vless_port=$2
@@ -224,9 +237,10 @@ run_preflight() {
         printf '    %s: %s\n' "$package" "$(package_state "$package")"
     done
 
+    collect_listener_states "$vless_port" "$hysteria2_port"
     printf '  Local listeners:\n'
-    printf '    VLESS TCP/%s: %s\n' "$vless_port" "$(listener_state tcp "$vless_port")"
-    printf '    Hysteria2 UDP/%s: %s\n' "$hysteria2_port" "$(listener_state udp "$hysteria2_port")"
+    printf '    VLESS TCP/%s: %s\n' "$vless_port" "$VLESS_LISTENER_STATE"
+    printf '    Hysteria2 UDP/%s: %s\n' "$hysteria2_port" "$HYSTERIA2_LISTENER_STATE"
 
     (( failed == 0 ))
 }
@@ -309,6 +323,7 @@ main() {
 
     run_preflight "$ip" "$vless_port" "$hysteria2_port" || return 1
     ensure_dependencies || return 1
+    collect_listener_states "$vless_port" "$hysteria2_port"
     if [[ -z $ip ]]; then
         if [[ -n $PREFLIGHT_EXTERNAL_IPV4 ]]; then
             ip=$PREFLIGHT_EXTERNAL_IPV4
@@ -322,7 +337,9 @@ main() {
     prepare_ipquality || return 1
     run_ipquality || return 1
     evaluate_vpn_trust "$IPQUALITY_JSON_PATH" || return 1
-    run_check_host "$ip" "$vless_port" "$hysteria2_port" "$country"
+    run_check_host "$ip" "$vless_port" "$hysteria2_port" "$country" || return 1
+    generate_reports "$ip" "$country" "$vless_port" "$hysteria2_port" \
+        "$VLESS_LISTENER_STATE" "$HYSTERIA2_LISTENER_STATE"
 }
 
 if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
