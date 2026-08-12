@@ -15,6 +15,7 @@ readonly SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 readonly EXIT_USAGE=2
 readonly DEFAULT_VLESS_PORT=443
 readonly DEFAULT_HYSTERIA2_PORT=443
+readonly DEFAULT_COUNTRY=ru
 readonly DEFAULT_OS_RELEASE_FILE=/etc/os-release
 readonly IP_LOOKUP_URL=https://api.ipify.org
 readonly -a CHECKED_COMMANDS=(curl sha256sum jq bc nc dig ip ss dpkg-query apt-get)
@@ -30,10 +31,11 @@ cleanup_runtime() {
 usage() {
     cat <<'EOF'
 Usage:
-  vps-check.sh [--ip IPV4] [--vless-port PORT] [--hysteria2-port PORT]
+  vps-check.sh [--ip IPV4] [--country CODE] [--vless-port PORT] [--hysteria2-port PORT]
 
 Options:
   --ip IPV4              VPS IPv4 address. Omit to auto-detect it.
+  --country CODE          Check-Host target country code (default: ru).
   --vless-port PORT      VLESS TCP port (default: 443).
   --hysteria2-port PORT  Hysteria2 UDP port (default: 443).
   -h, --help             Show this help.
@@ -65,6 +67,14 @@ is_port() {
     [[ $value =~ ^[0-9]{1,5}$ ]] || return 1
     [[ $value == 0 || $value != 0* ]] || return 1
     (( value >= 1 && value <= 65535 ))
+}
+
+is_country_code() {
+    [[ $1 =~ ^[A-Za-z]{2}$ ]]
+}
+
+normalize_country_code() {
+    printf '%s\n' "$1" | LC_ALL=C tr '[:upper:]' '[:lower:]'
 }
 
 read_os_info() (
@@ -223,9 +233,11 @@ run_preflight() {
 
 main() {
     local ip=''
+    local country=$DEFAULT_COUNTRY
     local vless_port=$DEFAULT_VLESS_PORT
     local hysteria2_port=$DEFAULT_HYSTERIA2_PORT
     local ip_seen=0
+    local country_seen=0
     local vless_port_seen=0
     local hysteria2_port_seen=0
 
@@ -236,6 +248,13 @@ main() {
                 (( $# >= 2 )) || fail_usage 'Option --ip requires a value.'
                 ip=$2
                 ip_seen=1
+                shift 2
+                ;;
+            --country)
+                (( country_seen == 0 )) || fail_usage 'Option --country was provided more than once.'
+                (( $# >= 2 )) || fail_usage 'Option --country requires a value.'
+                country=$2
+                country_seen=1
                 shift 2
                 ;;
             --vless-port)
@@ -268,6 +287,8 @@ main() {
     if (( ip_seen == 1 )) && ! is_ipv4 "$ip"; then
         fail_usage "Invalid IPv4 address: $ip"
     fi
+    is_country_code "$country" || fail_usage "Invalid country code: $country"
+    country=$(normalize_country_code "$country")
     is_port "$vless_port" || fail_usage "Invalid VLESS port: $vless_port"
     is_port "$hysteria2_port" || fail_usage "Invalid Hysteria2 port: $hysteria2_port"
 
@@ -277,6 +298,7 @@ main() {
     else
         printf 'IP: auto-detect\n'
     fi
+    printf 'Target country: %s\n' "$country"
     printf 'VLESS TCP port: %s\n' "$vless_port"
     printf 'Hysteria2 UDP port: %s\n' "$hysteria2_port"
 
@@ -300,7 +322,7 @@ main() {
     prepare_ipquality || return 1
     run_ipquality || return 1
     evaluate_vpn_trust "$IPQUALITY_JSON_PATH" || return 1
-    run_check_host "$ip" "$vless_port" "$hysteria2_port"
+    run_check_host "$ip" "$vless_port" "$hysteria2_port" "$country"
 }
 
 if [[ ${BASH_SOURCE[0]} == "$0" ]]; then

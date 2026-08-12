@@ -18,7 +18,7 @@ for argument in "$@"; do
 done
 
 if [[ $mode == check_host_unknown ]]; then
-    printf '%s\n' '{"provider":"Check-Host","provider_status":"UNKNOWN","provider_error":"Mock unavailable","nodes":{"russia":[],"control":[]},"checks":{}}'
+    printf '%s\n' '{"provider":"Check-Host","provider_status":"UNKNOWN","provider_error":"Mock unavailable","target_country":"ru","nodes":{"target_region":[],"control":[]},"checks":{}}'
     exit 0
 fi
 if [[ $mode == check_host_summary ]]; then

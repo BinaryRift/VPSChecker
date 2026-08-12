@@ -38,7 +38,8 @@ check_host_api_get() {
 select_check_host_nodes() {
     local source_path=$1
     local output_path=$2
-    jq -e '
+    local target_country=$3
+    jq -e --arg target_country "$target_country" '
         def normalized_node:
             {
                 id: .key,
@@ -50,13 +51,14 @@ select_check_host_nodes() {
             };
 
         [.nodes | to_entries[] | normalized_node] | sort_by(.id) as $nodes
-        | [$nodes[] | select(.country_code == "ru")][0:3] as $russia
+        | [$nodes[] | select(.country_code == $target_country)][0:3] as $target_region
         | [
             ["fi", "de", "nl", "us"][] as $country_code
+            | select($country_code != $target_country)
             | first($nodes[] | select(.country_code == $country_code))
           ][0:3] as $control
-        | {russia: $russia, control: $control}
-        | select((.russia | length) > 0 and (.control | length) > 0)
+        | {target_country: $target_country, target_region: $target_region, control: $control}
+        | select((.target_region | length) > 0 and (.control | length) > 0)
     ' "$source_path" > "$output_path"
 }
 
@@ -70,8 +72,7 @@ start_check_host_check() {
     while IFS= read -r node; do
         [[ -n $node ]] || continue
         request_arguments+=(--data-urlencode "node=$node")
-    done < <(jq -r '.russia[].id, .control[].id' "$nodes_path")
-
+    done < <(jq -r '.target_region[].id, .control[].id' "$nodes_path")
     check_host_api_get "$output_path" "check-$check_type" "${request_arguments[@]}" || return 1
     jq -e '
         .ok == 1
@@ -83,10 +84,9 @@ start_check_host_check() {
 check_host_result_complete() {
     local result_path=$1
     local nodes_path=$2
-
     jq -e --slurpfile selected "$nodes_path" '
         . as $result
-        | (($selected[0].russia + $selected[0].control)
+        | (($selected[0].target_region + $selected[0].control)
             | all(.[]; .id as $id | ($result | has($id) and .[$id] != null)))
     ' "$result_path" >/dev/null
 }
@@ -109,7 +109,6 @@ wait_check_host_result() {
         else
             rm -f -- "$poll_path"
         fi
-
         if (( attempt < CHECK_HOST_POLL_ATTEMPTS )); then
             check_host_sleep
         fi
@@ -216,7 +215,7 @@ normalize_check_host_result() {
         | $started[0] as $start
         | $raw[0] as $raw_results
         | [
-            ({region: "russia", nodes: $nodes.russia}, {region: "control", nodes: $nodes.control})
+            ({region: "target_region", nodes: $nodes.target_region}, {region: "control", nodes: $nodes.control})
             | .region as $region
             | .nodes[]
             | . as $node
@@ -236,7 +235,7 @@ normalize_check_host_result() {
                 end
               ))
           ] as $results
-        | region_summary($results; "russia") as $russia_summary
+        | region_summary($results; "target_region") as $target_summary
         | region_summary($results; "control") as $control_summary
         | {
             target: $target,
@@ -246,14 +245,14 @@ normalize_check_host_result() {
             error: ($start.error // null),
             results: $results,
             summary: {
-                russia: $russia_summary,
+                target_region: $target_summary,
                 control: $control_summary,
                 regional_difference: (
-                    ($russia_summary.status != "UNKNOWN")
+                    ($target_summary.status != "UNKNOWN")
                     and ($control_summary.status != "UNKNOWN")
-                    and ($russia_summary.status != "PARTIAL")
+                    and ($target_summary.status != "PARTIAL")
                     and ($control_summary.status != "PARTIAL")
-                    and ($russia_summary.status != $control_summary.status)
+                    and ($target_summary.status != $control_summary.status)
                 )
             }
           }
@@ -279,7 +278,6 @@ run_check_host_check() {
         write_failed_check_start "$check_type" "$start_path" || return 1
         printf '{}\n' > "$raw_path"
     fi
-
     normalize_check_host_result "$check_type" "$target" "$complete" \
         "$nodes_path" "$start_path" "$raw_path" "$output_path"
 }
@@ -288,13 +286,14 @@ write_unknown_check_host_result() {
     local ip=$1
     local vless_port=$2
     local hysteria2_port=$3
-    local error_message=$4
-    local output_path=$5
-
+    local target_country=$4
+    local error_message=$5
+    local output_path=$6
     jq -n \
         --arg ip "$ip" \
         --arg vless_target "$ip:$vless_port" \
         --arg hysteria2_target "$ip:$hysteria2_port" \
+        --arg target_country "$target_country" \
         --arg error "$error_message" '
         def unknown_check($target): {
             target: $target,
@@ -304,7 +303,7 @@ write_unknown_check_host_result() {
             error: $error,
             results: [],
             summary: {
-                russia: {total: 0, counts: {}, status: "UNKNOWN"},
+                target_region: {total: 0, counts: {}, status: "UNKNOWN"},
                 control: {total: 0, counts: {}, status: "UNKNOWN"},
                 regional_difference: false
             }
@@ -313,7 +312,8 @@ write_unknown_check_host_result() {
             provider: "Check-Host",
             provider_status: "UNKNOWN",
             provider_error: $error,
-            nodes: {russia: [], control: []},
+            target_country: $target_country,
+            nodes: {target_region: [], control: []},
             checks: {
                 ping: unknown_check($ip),
                 vless_tcp: unknown_check($vless_target),
@@ -325,16 +325,15 @@ write_unknown_check_host_result() {
 
 print_check_host_summary() {
     local result_path=$1
-
     printf '\nCheck-Host regional checks:\n'
     jq -r '
         if .provider_status == "UNKNOWN" then
             "  Provider: UNKNOWN (\(.provider_error))"
         else
-            "  Nodes: Russia \(.nodes.russia | length), control \(.nodes.control | length)",
-            "  Ping: Russia \(.checks.ping.summary.russia.status), control \(.checks.ping.summary.control.status)",
-            "  VLESS TCP: Russia \(.checks.vless_tcp.summary.russia.status), control \(.checks.vless_tcp.summary.control.status)",
-            "  Hysteria2 UDP: Russia \(.checks.hysteria2_udp.summary.russia.status), control \(.checks.hysteria2_udp.summary.control.status)"
+            "  Nodes: target \(.target_country | ascii_upcase) \(.nodes.target_region | length), control \(.nodes.control | length)",
+            "  Ping: target \(.checks.ping.summary.target_region.status), control \(.checks.ping.summary.control.status)",
+            "  VLESS TCP: target \(.checks.vless_tcp.summary.target_region.status), control \(.checks.vless_tcp.summary.control.status)",
+            "  Hysteria2 UDP: target \(.checks.hysteria2_udp.summary.target_region.status), control \(.checks.hysteria2_udp.summary.control.status)"
         end
     ' "$result_path"
 }
@@ -343,8 +342,8 @@ run_check_host() {
     local ip=$1
     local vless_port=$2
     local hysteria2_port=$3
-    local nodes_path selected_nodes_path temporary_result_path
-
+    local target_country=$4
+    local nodes_path selected_nodes_path temporary_result_path error_message
     cleanup_check_host_temp
     CHECK_HOST_TEMP_DIR="$IPQUALITY_TEMP_DIR/check-host"
     mkdir -m 0700 -- "$CHECK_HOST_TEMP_DIR" || {
@@ -356,21 +355,19 @@ run_check_host() {
     selected_nodes_path="$CHECK_HOST_TEMP_DIR/selected-nodes.json"
     CHECK_HOST_JSON_PATH="$CHECK_HOST_TEMP_DIR/result.json"
     temporary_result_path="$CHECK_HOST_JSON_PATH.tmp"
-
     if ! check_host_api_get "$nodes_path" nodes/hosts \
         || ! jq -e '.nodes | type == "object"' "$nodes_path" >/dev/null 2>&1 \
-        || ! select_check_host_nodes "$nodes_path" "$selected_nodes_path"; then
+        || ! select_check_host_nodes "$nodes_path" "$selected_nodes_path" "$target_country"; then
+        error_message="Could not obtain Check-Host nodes for country $target_country and control nodes."
         write_unknown_check_host_result "$ip" "$vless_port" "$hysteria2_port" \
-            'Could not obtain Russian and control Check-Host nodes.' "$CHECK_HOST_JSON_PATH" || return 1
+            "$target_country" "$error_message" "$CHECK_HOST_JSON_PATH" || return 1
         chmod 0600 "$CHECK_HOST_JSON_PATH" 2>/dev/null || true
         print_check_host_summary "$CHECK_HOST_JSON_PATH"
         return 0
     fi
-
     run_check_host_check ping "$ip" "$selected_nodes_path" || return 1
     run_check_host_check tcp "$ip:$vless_port" "$selected_nodes_path" || return 1
     run_check_host_check udp "$ip:$hysteria2_port" "$selected_nodes_path" || return 1
-
     if ! jq -n \
         --slurpfile nodes "$selected_nodes_path" \
         --slurpfile ping "$CHECK_HOST_TEMP_DIR/ping.json" \
@@ -379,7 +376,11 @@ run_check_host() {
             provider: "Check-Host",
             provider_status: "AVAILABLE",
             provider_error: null,
-            nodes: $nodes[0],
+            target_country: $nodes[0].target_country,
+            nodes: {
+                target_region: $nodes[0].target_region,
+                control: $nodes[0].control
+            },
             checks: {
                 ping: $ping[0],
                 vless_tcp: $tcp[0],
@@ -394,6 +395,5 @@ run_check_host() {
         return 1
     }
     mv -- "$temporary_result_path" "$CHECK_HOST_JSON_PATH" || return 1
-
     print_check_host_summary "$CHECK_HOST_JSON_PATH"
 }

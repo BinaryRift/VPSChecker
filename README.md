@@ -6,7 +6,7 @@ VPSChecker is a small terminal utility designed to assess whether a VPS IP is
 suitable for use as a VPN exit node. It checks three independent areas:
 
 - IP reputation and trust signals;
-- reachability from Russia;
+- reachability from a selected country (Russia by default);
 - local and external availability of VLESS TCP and Hysteria2 UDP ports.
 
 Reputation, regional reachability, and service state are reported separately.
@@ -20,9 +20,10 @@ is kept unchanged. VPSChecker separately derives an `OK`, `WARNING`, `POOR`, or
 mail reputation do not affect this assessment.
 
 Regional checks use the current Check-Host node list. VPSChecker selects up to
-three Russian nodes and three control nodes outside Russia, then runs an
-auxiliary ping, a VLESS TCP connection check, and a Hysteria2 UDP check. A UDP
-result is reported as `OPEN_OR_FILTERED`, not as proof that Hysteria2 works.
+three nodes in the target country and three control nodes in other countries,
+then runs an auxiliary ping, a VLESS TCP connection check, and a Hysteria2 UDP
+check. A UDP result is reported as `OPEN_OR_FILTERED`, not as proof that
+Hysteria2 works.
 
 If required APT packages are missing, VPSChecker lists them and asks for
 confirmation before running `apt-get update` and installing only those packages
@@ -50,12 +51,14 @@ Run with automatic external IPv4 detection and the default ports:
 ./vps-check.sh
 ```
 
-The default ports are TCP/443 for VLESS and UDP/443 for Hysteria2. The IP and
-either port can be specified explicitly:
+The default target country is Russia (`ru`), using a two-letter ISO country code.
+The default ports are TCP/443 for VLESS and UDP/443 for Hysteria2. The country,
+IP, and either port can be specified explicitly:
 
 ```bash
 ./vps-check.sh \
   --ip 203.0.113.10 \
+  --country de \
   --vless-port 2053 \
   --hysteria2-port 8443
 ```

@@ -44,6 +44,10 @@ run_case 'accepts only a VLESS port override' 0 'Hysteria2 UDP port: 443' \
     --ip 203.0.113.10 --vless-port 2053
 run_case 'accepts only a Hysteria2 port override' 0 'VLESS TCP port: 443' \
     --ip 203.0.113.10 --hysteria2-port 8443
+run_case 'uses Russia as the default target country' 0 'Target country: ru' \
+    --ip 203.0.113.10
+run_case 'accepts and normalizes a target country' 0 'Target country: de' \
+    --ip 203.0.113.10 --country DE
 run_case 'shows help' 0 'Usage:' --help
 
 run_case 'rejects an IPv4 octet above 255' 2 'Invalid IPv4 address' \
@@ -60,9 +64,14 @@ run_case 'rejects a port above 65535' 2 'Invalid Hysteria2 port' \
     --vless-port 443 --hysteria2-port 65536
 run_case 'rejects a non-numeric port' 2 'Invalid VLESS port' \
     --vless-port https --hysteria2-port 8443
+run_case 'rejects a country name' 2 'Invalid country code' --country Germany
+run_case 'rejects a malformed country code' 2 'Invalid country code' --country r1
 run_case 'rejects a missing option value' 2 'Option --ip requires a value' --ip
+run_case 'rejects a missing country value' 2 'Option --country requires a value' --country
 run_case 'rejects duplicate options' 2 'Option --vless-port was provided more than once' \
     --vless-port 443 --vless-port 8443 --hysteria2-port 8443
+run_case 'rejects a duplicate country option' 2 'Option --country was provided more than once' \
+    --country ru --country de
 run_case 'rejects unknown options' 2 'Unknown option' \
     --vless-port 443 --hysteria2-port 8443 --unknown
 run_case 'rejects positional arguments' 2 'Unexpected argument' \
