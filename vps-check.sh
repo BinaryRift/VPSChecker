@@ -3,6 +3,8 @@
 set -u
 
 readonly SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=lib/version.sh
+. "$SCRIPT_DIR/lib/version.sh"
 # shellcheck source=lib/dependencies.sh
 . "$SCRIPT_DIR/lib/dependencies.sh"
 # shellcheck source=lib/ipquality.sh
@@ -41,6 +43,7 @@ Options:
   --hysteria2-port PORT  Hysteria2 UDP port (default: 443).
   --print-report          Also print the text report to the terminal.
   --cleanup               Remove pending VPSChecker APT packages on exit.
+  --version               Show the VPSChecker version.
   -h, --help             Show this help.
 EOF
 }
@@ -257,6 +260,7 @@ main() {
     local cleanup_requested=0
     local cleanup_seen=0
 
+    load_tool_version "$SCRIPT_DIR/VERSION" || return 1
     set_cleanup_plan_path
     if [[ ${1:-} == cleanup ]]; then
         shift
@@ -310,6 +314,10 @@ main() {
                 cleanup_requested=1
                 cleanup_seen=1
                 shift
+                ;;
+            --version)
+                printf 'VPSChecker %s\n' "$VPSCHECK_VERSION"
+                return 0
                 ;;
             -h|--help)
                 usage

@@ -60,6 +60,7 @@ run_case 'prints the text report when requested' 0 'VPSChecker report' \
 run_case 'enables automatic package cleanup' 0 'Automatic package cleanup: enabled' \
     --ip 203.0.113.10 --cleanup
 run_case 'shows help' 0 'Usage:' --help
+run_case 'shows the tool version' 0 'VPSChecker 0.1.0' --version
 run_case 'shows cleanup command help' 0 'Safely remove packages recorded' cleanup --help
 run_case 'reports a missing cleanup plan' 1 'no valid cleanup plan' cleanup
 

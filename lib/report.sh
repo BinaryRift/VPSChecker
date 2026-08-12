@@ -53,6 +53,7 @@ build_report_json() {
         --arg vless_listener "$vless_listener" \
         --arg hysteria2_listener "$hysteria2_listener" \
         --argjson cleanup_requested "$cleanup_requested_json" \
+        --arg tool_version "$VPSCHECK_VERSION" \
         --arg ipquality_version "$IPQUALITY_VERSION" \
         --arg ipquality_commit "$IPQUALITY_COMMIT" \
         --argjson added_packages "$added_packages" \
@@ -182,6 +183,10 @@ build_report_json() {
            end) as $replacement
         | {
             schema_version: 1,
+            tool: {
+                name: "VPSChecker",
+                version: $tool_version
+            },
             generated_at: $generated_at,
             target: {
                 ip: $ip,
@@ -267,6 +272,7 @@ build_text_report() {
     jq -r '
         "VPSChecker report",
         "=================",
+        "Version: \(.tool.version)",
         "Generated: \(.generated_at)",
         "IP: \(.target.ip)",
         "Target country: \(.target.country | ascii_upcase)",

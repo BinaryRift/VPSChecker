@@ -97,6 +97,12 @@ Show command help:
 ./vps-check.sh --help
 ```
 
+Show the installed version:
+
+```bash
+./vps-check.sh --version
+```
+
 Also print the text report to the terminal while keeping both report files:
 
 ```bash
@@ -116,6 +122,13 @@ Without that flag, run the printed command later from the same directory:
 ```
 
 The standalone command shows the exact packages and asks for confirmation.
+
+## Versioning
+
+`VERSION` is the single source of the tool version. VPSChecker uses semantic
+versions, exposes the value through `--version`, and includes it in text and JSON
+reports. Releases should use a matching `v<version>` Git tag, for example
+`v0.1.0`, and may then be published as a GitHub Release.
 
 List the country codes currently available through Check-Host:
 
@@ -155,5 +168,6 @@ bash tests/check_host_test.sh
 bash tests/list_check_host_locations_test.sh
 bash tests/report_test.sh
 bash tests/cleanup_test.sh
+bash tests/version_test.sh
 bash tests/update_ipquality_test.sh
 ```

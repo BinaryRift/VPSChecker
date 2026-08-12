@@ -7,6 +7,7 @@ readonly PROJECT_DIR=$(cd "$TEST_DIR/.." && pwd)
 readonly REPUTATION_FIXTURE="$TEST_DIR/fixtures/reputation/ok.json"
 readonly REPORT_FIXTURES="$TEST_DIR/fixtures/report"
 
+VPSCHECK_VERSION=0.1.0
 IPQUALITY_VERSION=v2026-08-09
 IPQUALITY_COMMIT=0ee5f192fed70c04615852efba0e4b8bd43546c7
 DEPENDENCY_ADDED_PACKAGES=()
@@ -146,10 +147,12 @@ test_stable_report_structure() (
     text_report=$(< "$REPORT_TEXT_PATH")
 
     [[ $before == "$after" && -f $REPORT_JSON_PATH && -f $REPORT_TEXT_PATH ]] || return 1
+    [[ $text_report == *'Version: 0.1.0'* ]] || return 1
     [[ $text_report == *'VPN suitability: OK'* ]] || return 1
     [[ $text_report == *'VLESS: TRANSPORT_ONLY'* ]] || return 1
     jq -e --slurpfile raw "$IPQUALITY_JSON_PATH" '
         .schema_version == 1
+        and .tool == {name: "VPSChecker", version: "0.1.0"}
         and (.reputation.raw_ipquality == $raw[0])
         and (.reputation.factors | has("Server") | not)
         and .vpn_suitability.vpn_trust == "OK"
