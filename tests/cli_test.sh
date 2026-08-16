@@ -79,7 +79,7 @@ run_case 'uses no absent listeners when temporary setup is disabled' 0 \
 run_case 'enables automatic package cleanup' 0 'Automatic package cleanup: enabled' \
     --ip 203.0.113.10 --cleanup
 run_case 'shows temporary listener help' 0 '--no-temporary-listeners' --help
-run_case 'shows the tool version' 0 'VPSChecker 0.2.0' --version
+run_case 'shows the tool version' 0 'VPSChecker 0.3.0' --version
 run_case 'shows cleanup command help' 0 'Safely remove packages recorded' cleanup --help
 run_case 'reports a missing cleanup plan' 1 'no valid cleanup plan' cleanup
 
