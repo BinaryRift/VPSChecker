@@ -202,5 +202,7 @@ evaluate_vpn_trust() {
     }
     VPN_TRUST_JSON_PATH=$output_path
 
-    printf 'VPN trust: %s\n' "$VPN_TRUST_STATUS"
+    printf 'VPN trust: '
+    terminal_status_printf 1 "$VPN_TRUST_STATUS" || return 1
+    printf '\n'
 }

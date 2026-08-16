@@ -368,6 +368,7 @@ generate_reports() {
 
 present_reports() {
     local print_report=${1:-0}
+    local summary vpn_trust replacement_advice
 
     [[ -f ${REPORT_JSON_PATH:-} && -f ${REPORT_TEXT_PATH:-} ]] || {
         printf 'Error: final reports are unavailable.\n' >&2
@@ -377,16 +378,24 @@ present_reports() {
         printf '\n'
         cat -- "$REPORT_TEXT_PATH" || return 1
     else
+        summary=$(jq -er '[
+            .vpn_suitability.vpn_trust,
+            .replacement_advice.status
+        ] | @tsv' "$REPORT_JSON_PATH") || return 1
+        IFS=$'\t' read -r vpn_trust replacement_advice <<< "$summary"
+
+        printf '\nResult:\n'
+        printf '  VPN suitability: '
+        terminal_status_printf 1 "$vpn_trust" || return 1
+        printf '\n  Replacement advice: '
+        terminal_status_printf 1 "$replacement_advice" || return 1
         printf '\n'
         jq -r '
-            "Result:",
-            "  VPN suitability: \(.vpn_suitability.vpn_trust)",
-            "  Replacement advice: \(.replacement_advice.status)",
-            (if (.vpn_suitability.manual_checks | length) > 0 then
+            if (.vpn_suitability.manual_checks | length) > 0 then
                 "",
                 "Manual verification:",
                 (.vpn_suitability.manual_checks[] | "  \(.service): \(.url)")
-             else empty end)
+            else empty end
         ' "$REPORT_JSON_PATH" || return 1
     fi
     printf '\nReports:\n'

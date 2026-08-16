@@ -14,6 +14,8 @@ DEPENDENCY_ADDED_PACKAGES=()
 DEPENDENCY_UPDATED_PACKAGES=()
 DEPENDENCY_REQUESTED_PACKAGES=()
 
+# shellcheck source=../lib/terminal.sh
+. "$PROJECT_DIR/lib/terminal.sh"
 # shellcheck source=../lib/report_path.sh
 . "$PROJECT_DIR/lib/report_path.sh"
 # shellcheck source=../lib/report.sh
@@ -272,6 +274,26 @@ test_console_output_includes_manual_checks_when_needed() (
         && $output == *'Scamalytics: https://scamalytics.com/ip/203.0.113.10'* ]]
 )
 
+test_console_output_colors_only_result_statuses() (
+    local output output_path
+
+    setup_report ok network-ok.json
+    trap cleanup_report_test EXIT
+    output_path="$REPORT_TEST_DIR/output.txt"
+    generate_reports 203.0.113.10 ru 443 8443 listening listening || return 1
+    terminal_stream_is_tty() {
+        return 0
+    }
+    TERM=xterm
+    unset NO_COLOR
+
+    present_reports > "$output_path" || return 1
+    output=$(< "$output_path")
+    rm -f -- "$output_path"
+    [[ $output == *$'VPN suitability: \033[32mOK\033[0m'* \
+        && $output == *$'Replacement advice: \033[32mREPLACEMENT_UNLIKELY\033[0m'* ]]
+)
+
 test_console_output_can_be_enabled() (
     local output
 
@@ -358,6 +380,7 @@ run_test 'returns INCONCLUSIVE when required data is unavailable' test_missing_d
 run_test 'returns INCONCLUSIVE when reputation sources only conflict' test_conflicting_data_is_inconclusive
 run_test 'prints a compact result by default' test_console_output_is_compact_by_default
 run_test 'includes manual verification links in a compact result when needed' test_console_output_includes_manual_checks_when_needed
+run_test 'colors only compact result statuses in a terminal' test_console_output_colors_only_result_statuses
 run_test 'prints the text report when requested' test_console_output_can_be_enabled
 run_test 'finalizes cleanup status in both reports' test_finalizes_cleanup_status
 run_test 'marks requested automatic cleanup as scheduled' test_marks_automatic_cleanup_as_scheduled

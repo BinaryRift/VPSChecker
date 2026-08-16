@@ -6,6 +6,8 @@ readonly TEST_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 readonly PROJECT_DIR=$(cd "$TEST_DIR/.." && pwd)
 readonly FIXTURES_DIR="$TEST_DIR/fixtures/check_host"
 
+# shellcheck source=../lib/terminal.sh
+. "$PROJECT_DIR/lib/terminal.sh"
 # shellcheck source=../lib/check_host.sh
 . "$PROJECT_DIR/lib/check_host.sh"
 
@@ -211,6 +213,26 @@ test_country_without_nodes_is_unknown() (
     ' "$CHECK_HOST_JSON_PATH" >/dev/null
 )
 
+test_colors_only_regional_status_values() (
+    local output output_path
+
+    setup_check
+    output_path=$(mktemp)
+    trap 'rm -f -- "$output_path"; cleanup_check' EXIT
+    MOCK_SCENARIO=success
+    run_check_host 203.0.113.10 443 8443 ru >/dev/null || return 1
+    terminal_stream_is_tty() {
+        return 0
+    }
+    TERM=xterm
+    unset NO_COLOR
+
+    print_check_host_summary "$CHECK_HOST_JSON_PATH" > "$output_path" || return 1
+    output=$(< "$output_path")
+    [[ $output == *$'Ping: target \033[32mREACHABLE\033[0m, control \033[32mREACHABLE\033[0m'* \
+        && $output == *$'Hysteria2 UDP: target \033[36mOPEN_OR_FILTERED\033[0m, control \033[36mOPEN_OR_FILTERED\033[0m'* ]]
+)
+
 run_test 'normalizes successful regional checks' test_successful_results
 run_test 'normalizes failed regional checks' test_failed_results
 run_test 'uses nodes from the requested country' test_requested_country_is_used
@@ -219,6 +241,7 @@ run_test 'keeps incomplete node results as UNKNOWN' test_incomplete_results
 run_test 'bounds polling when the result API keeps failing' test_poll_failures_are_bounded
 run_test 'reports UNKNOWN when Check-Host is unavailable' test_provider_failure_is_unknown
 run_test 'reports UNKNOWN when the target country has no nodes' test_country_without_nodes_is_unknown
+run_test 'colors only regional status values in a terminal' test_colors_only_regional_status_values
 
 printf '\n%s passed, %s failed\n' "$passed" "$failed"
 (( failed == 0 ))

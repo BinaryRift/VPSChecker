@@ -6,6 +6,8 @@ readonly TEST_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 readonly PROJECT_DIR=$(cd "$TEST_DIR/.." && pwd)
 readonly FIXTURES_DIR="$TEST_DIR/fixtures/reputation"
 
+# shellcheck source=../lib/terminal.sh
+. "$PROJECT_DIR/lib/terminal.sh"
 # shellcheck source=../lib/reputation.sh
 . "$PROJECT_DIR/lib/reputation.sh"
 
@@ -137,12 +139,31 @@ test_geolocation_mismatch_is_warning() (
         "$VPN_TRUST_JSON_PATH" >/dev/null
 )
 
+test_colors_only_the_vpn_trust_status() (
+    local output output_path
+
+    setup_result_dir
+    trap cleanup_result_dir EXIT
+    output_path="$IPQUALITY_TEMP_DIR/output.txt"
+    terminal_stream_is_tty() {
+        return 0
+    }
+    TERM=xterm
+    unset NO_COLOR
+
+    evaluate_vpn_trust "$FIXTURES_DIR/ok.json" > "$output_path" || return 1
+    output=$(< "$output_path")
+    rm -f -- "$output_path"
+    [[ $output == $'VPN trust: \033[32mOK\033[0m' ]]
+)
+
 run_test 'returns OK while ignoring hosting and mail-only signals' test_ok_ignores_hosting_and_mail
 run_test 'returns WARNING with concrete reasons and manual links' test_warning_has_concrete_reasons_and_links
 run_test 'returns POOR for strong signals from independent sources' test_poor_requires_independent_strong_sources
 run_test 'returns POOR for severe scores from independent sources' test_poor_for_independent_severe_scores
 run_test 'returns UNKNOWN when reputation data is insufficient' test_unknown_for_insufficient_data
 run_test 'returns WARNING when country results disagree' test_geolocation_mismatch_is_warning
+run_test 'colors only the VPN trust status in a terminal' test_colors_only_the_vpn_trust_status
 
 printf '\n%s passed, %s failed\n' "$passed" "$failed"
 (( failed == 0 ))

@@ -40,6 +40,15 @@ terminal_status_style() {
     esac
 }
 
+terminal_status_printf() {
+    local fd=$1
+    local status=$2
+    local style
+
+    style=$(terminal_status_style "$status") || return 1
+    terminal_printf "$fd" "$style" '%s' "$status"
+}
+
 terminal_printf() {
     local fd=$1
     local style=$2

@@ -325,17 +325,47 @@ write_unknown_check_host_result() {
 
 print_check_host_summary() {
     local result_path=$1
+    local summary provider_status provider_error target_country target_nodes control_nodes
+    local ping_target ping_control tcp_target tcp_control udp_target udp_control
+
+    summary=$(jq -er '[
+        .provider_status,
+        (.provider_error // ""),
+        (.target_country | ascii_upcase),
+        (.nodes.target_region | length),
+        (.nodes.control | length),
+        .checks.ping.summary.target_region.status,
+        .checks.ping.summary.control.status,
+        .checks.vless_tcp.summary.target_region.status,
+        .checks.vless_tcp.summary.control.status,
+        .checks.hysteria2_udp.summary.target_region.status,
+        .checks.hysteria2_udp.summary.control.status
+    ] | join("\u001f")' "$result_path") || return 1
+    IFS=$'\037' read -r provider_status provider_error target_country target_nodes control_nodes \
+        ping_target ping_control tcp_target tcp_control udp_target udp_control <<< "$summary"
+
     printf '\nCheck-Host regional checks:\n'
-    jq -r '
-        if .provider_status == "UNKNOWN" then
-            "  Provider: UNKNOWN (\(.provider_error))"
-        else
-            "  Nodes: target \(.target_country | ascii_upcase) \(.nodes.target_region | length), control \(.nodes.control | length)",
-            "  Ping: target \(.checks.ping.summary.target_region.status), control \(.checks.ping.summary.control.status)",
-            "  VLESS TCP: target \(.checks.vless_tcp.summary.target_region.status), control \(.checks.vless_tcp.summary.control.status)",
-            "  Hysteria2 UDP: target \(.checks.hysteria2_udp.summary.target_region.status), control \(.checks.hysteria2_udp.summary.control.status)"
-        end
-    ' "$result_path"
+    if [[ $provider_status == UNKNOWN ]]; then
+        printf '  Provider: '
+        terminal_status_printf 1 "$provider_status" || return 1
+        printf ' (%s)\n' "$provider_error"
+        return
+    fi
+
+    printf '  Nodes: target %s %s, control %s\n' "$target_country" "$target_nodes" "$control_nodes"
+    printf '  Ping: target '
+    terminal_status_printf 1 "$ping_target" || return 1
+    printf ', control '
+    terminal_status_printf 1 "$ping_control" || return 1
+    printf '\n  VLESS TCP: target '
+    terminal_status_printf 1 "$tcp_target" || return 1
+    printf ', control '
+    terminal_status_printf 1 "$tcp_control" || return 1
+    printf '\n  Hysteria2 UDP: target '
+    terminal_status_printf 1 "$udp_target" || return 1
+    printf ', control '
+    terminal_status_printf 1 "$udp_control" || return 1
+    printf '\n'
 }
 
 run_check_host() {
