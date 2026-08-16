@@ -121,7 +121,7 @@ main() {
     mv -- "$source_directory" "$INSTALL_DIRECTORY"
 
     printf 'VPSChecker installed in %s\n' "$INSTALL_DIRECTORY"
-    printf 'Run: ./vpschecker/vps-check.sh\n'
+    printf '\033[1;32mNow you should run: ./vpschecker/vps-check.sh\033[0m\n'
 }
 
 main "$@"

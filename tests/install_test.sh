@@ -71,7 +71,7 @@ test_installs_verified_release() (
         && -x $test_root/work/vpschecker/vps-check.sh \
         && -f $test_root/work/vpschecker/lib/report.sh \
         && $output == *'VPSChecker installed in'* \
-        && $output == *'Run: ./vpschecker/vps-check.sh'* ]]
+        && $output == *$'\033[1;32mNow you should run: ./vpschecker/vps-check.sh\033[0m'* ]]
 )
 
 test_rejects_checksum_mismatch() (
