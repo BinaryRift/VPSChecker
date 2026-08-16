@@ -33,7 +33,7 @@ readonly DEFAULT_COUNTRY=ru
 readonly DEFAULT_REPORT_DIR=reports
 readonly DEFAULT_OS_RELEASE_FILE=/etc/os-release
 readonly IP_LOOKUP_URL=https://api.ipify.org
-readonly -a CHECKED_COMMANDS=(curl sha256sum jq bc nc dig ip ss dpkg-query apt-get)
+readonly -a CHECKED_COMMANDS=(curl sha256sum jq bc nc dig ip ss timeout dpkg-query apt-get)
 PREFLIGHT_EXTERNAL_IPV4=''
 VLESS_LISTENER_STATE='unknown'
 HYSTERIA2_LISTENER_STATE='unknown'
@@ -365,6 +365,7 @@ main() {
     run_ipquality || return 1
     evaluate_vpn_trust "$IPQUALITY_JSON_PATH" || return 1
     run_check_host "$ip" "$vless_port" "$hysteria2_port" "$country" || return 1
+    stop_temporary_listeners || return 1
     generate_reports "$ip" "$country" "$vless_port" "$hysteria2_port" \
         "$VLESS_LISTENER_STATE" "$HYSTERIA2_LISTENER_STATE" "$cleanup_requested" \
         "$report_dir" || return 1

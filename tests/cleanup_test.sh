@@ -9,6 +9,8 @@ readonly PROJECT_DIR=$(cd "$TEST_DIR/.." && pwd)
 . "$PROJECT_DIR/lib/terminal.sh"
 # shellcheck source=../lib/dependencies.sh
 . "$PROJECT_DIR/lib/dependencies.sh"
+# shellcheck source=../lib/listeners.sh
+. "$PROJECT_DIR/lib/listeners.sh"
 # shellcheck source=../lib/cleanup.sh
 . "$PROJECT_DIR/lib/cleanup.sh"
 
@@ -31,7 +33,7 @@ run_test() {
 run_cleanup_case() {
     local mode=$1
     local expected_status=$2
-    local case_dir status
+    local case_dir listener_pid status
 
     case_dir=$(mktemp -d) || return 1
     PROJECT_DIR_FOR_TEST=$PROJECT_DIR CASE_DIR_FOR_TEST=$case_dir \
@@ -56,6 +58,10 @@ run_cleanup_case() {
 
             trap cleanup_runtime EXIT
             trap "exit 130" INT
+            sleep 30 &
+            listener_pid=$!
+            printf "%s\n" "$listener_pid" > "$CASE_DIR_FOR_TEST/listener.pid"
+            register_temporary_listener "$listener_pid" 0 tcp 18443 || exit 1
             case $1 in
                 success) exit 0 ;;
                 error) exit 17 ;;
@@ -63,6 +69,16 @@ run_cleanup_case() {
             esac
         ' cleanup-driver "$mode" >/dev/null 2>&1
     status=$?
+
+    [[ -f $case_dir/listener.pid ]] || return 1
+    listener_pid=$(< "$case_dir/listener.pid")
+    if [[ $listener_pid =~ ^[0-9]+$ ]] && (( listener_pid > 1 )) \
+        && kill -0 "$listener_pid" 2>/dev/null; then
+        kill -TERM "$listener_pid" 2>/dev/null || true
+        rm -f -- "$case_dir/listener.pid"
+        return 1
+    fi
+    rm -f -- "$case_dir/listener.pid"
 
     [[ $status -eq $expected_status ]] || {
         rm -f -- \
@@ -210,6 +226,7 @@ test_runtime_defers_cleanup_by_default() (
     local case_dir
     local execute_called=0
     local final_status=''
+    local listener_cleanup_called=0
 
     case_dir=$(mktemp -d) || return 1
     CLEANUP_PLAN_PATH="$case_dir/.vpschecker-cleanup.plan"
@@ -217,6 +234,9 @@ test_runtime_defers_cleanup_by_default() (
     AUTO_CLEANUP_REQUESTED=0
     RUNTIME_CLEANUP_DONE=0
     RUNTIME_CLEANUP_FAILED=0
+    stop_temporary_listeners() {
+        listener_cleanup_called=1
+    }
     defer_added_dependencies() {
         DEPENDENCY_ADDED_PACKAGES=(jq)
         DEPENDENCY_CLEANUP_STATUS='DEFERRED'
@@ -238,7 +258,9 @@ test_runtime_defers_cleanup_by_default() (
     }
 
     cleanup_runtime 0 || return 1
-    [[ $execute_called -eq 0 && $final_status == DEFERRED ]] || return 1
+    [[ $listener_cleanup_called -eq 1 \
+        && $execute_called -eq 0 \
+        && $final_status == DEFERRED ]] || return 1
     rm -f -- "$CLEANUP_PLAN_PATH"
     rmdir -- "$case_dir"
 )

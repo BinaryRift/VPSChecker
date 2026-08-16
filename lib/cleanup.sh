@@ -165,6 +165,9 @@ cleanup_runtime() {
     RUNTIME_CLEANUP_DONE=1
     trap - EXIT HUP INT TERM
 
+    if ! stop_temporary_listeners; then
+        RUNTIME_CLEANUP_FAILED=1
+    fi
     if ! defer_added_dependencies || ! save_dependency_cleanup_plan; then
         DEPENDENCY_CLEANUP_STATUS='FAILED'
         RUNTIME_CLEANUP_FAILED=1

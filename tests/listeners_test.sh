@@ -37,8 +37,12 @@ configure_mock_listener() {
             printf 'not listening\n'
         fi
     }
+    timeout() {
+        printf 'timeout %s\n' "$*" > "$arguments_path"
+        shift 3
+        "$@"
+    }
     nc() {
-        printf '%s\n' "$*" > "$arguments_path"
         : > "$state_path"
         while :; do
             sleep 1
@@ -66,6 +70,7 @@ test_reuses_existing_listener() (
     [[ $PREPARED_LISTENER_SOURCE == EXISTING \
         && -z $PREPARED_LISTENER_PID \
         && $PREPARED_LISTENER_PRIVILEGED -eq 0 \
+        && ${#TEMPORARY_LISTENER_PIDS[@]} -eq 0 \
         && ! -e $called_path ]]
 )
 
@@ -83,8 +88,12 @@ test_starts_tcp_listener_on_free_port() (
     [[ $PREPARED_LISTENER_SOURCE == TEMPORARY \
         && $PREPARED_LISTENER_PRIVILEGED -eq 0 \
         && $pid =~ ^[0-9]+$ \
-        && $(< "$arguments_path") == '-4 -d -k -l 8443' ]] || return 1
-    stop_temporary_listener "$pid" 0
+        && ${#TEMPORARY_LISTENER_PIDS[@]} -eq 1 \
+        && $(< "$arguments_path") == \
+            'timeout --signal=TERM --kill-after=2s 180s nc -4 -d -k -l 8443' ]] || return 1
+    stop_temporary_listeners || return 1
+    [[ ${#TEMPORARY_LISTENER_PIDS[@]} -eq 0 ]] || return 1
+    ! kill -0 "$pid" 2>/dev/null
 )
 
 test_starts_udp_listener_on_free_port() (
@@ -99,8 +108,10 @@ test_starts_udp_listener_on_free_port() (
     prepare_listener udp 8443 || return 1
     pid=$PREPARED_LISTENER_PID
     [[ $PREPARED_LISTENER_SOURCE == TEMPORARY \
-        && $(< "$arguments_path") == '-4 -d -k -u -l 8443' ]] || return 1
-    stop_temporary_listener "$pid" 0
+        && $(< "$arguments_path") == \
+            'timeout --signal=TERM --kill-after=2s 180s nc -4 -d -k -u -l 8443' ]] || return 1
+    stop_temporary_listeners || return 1
+    ! kill -0 "$pid" 2>/dev/null
 )
 
 test_authorizes_privileged_port() (
@@ -132,8 +143,10 @@ test_authorizes_privileged_port() (
     [[ $PREPARED_LISTENER_SOURCE == TEMPORARY \
         && $PREPARED_LISTENER_PRIVILEGED -eq 1 \
         && -f $authorized_path \
-        && $(sed -n '1p' "$privileged_path") == 'nc -4 -d -k -l 443' ]] || return 1
-    stop_temporary_listener "$pid" 1
+        && $(sed -n '1p' "$privileged_path") == \
+            'timeout --signal=TERM --kill-after=2s 180s nc -4 -d -k -l 443' ]] || return 1
+    stop_temporary_listeners || return 1
+    ! kill -0 "$pid" 2>/dev/null
 )
 
 test_rejects_privileged_port_without_sudo() (
@@ -147,6 +160,9 @@ test_rejects_privileged_port_without_sudo() (
     }
     listener_sudo_available() {
         return 1
+    }
+    timeout() {
+        return 0
     }
 
     output=$(prepare_listener tcp 443 2>&1)
@@ -163,6 +179,10 @@ test_rejects_unverified_listener_start() (
     nc() {
         return 1
     }
+    timeout() {
+        shift 3
+        "$@"
+    }
     temporary_listener_wait() {
         return 0
     }
@@ -174,12 +194,26 @@ test_rejects_unverified_listener_start() (
         && $output == *'could not start temporary tcp/8443 listener'* ]]
 )
 
+test_retains_listener_when_cleanup_fails() (
+    register_temporary_listener 12345 0 tcp 8443 || return 1
+    stop_temporary_listener() {
+        return 1
+    }
+
+    ! stop_temporary_listeners >/dev/null 2>&1 || return 1
+    [[ ${#TEMPORARY_LISTENER_PIDS[@]} -eq 1 \
+        && ${TEMPORARY_LISTENER_PIDS[0]} == 12345 \
+        && ${TEMPORARY_LISTENER_PROTOCOLS[0]} == tcp \
+        && ${TEMPORARY_LISTENER_PORTS[0]} == 8443 ]]
+)
+
 run_test 'reuses an existing listener without starting a process' test_reuses_existing_listener
 run_test 'starts and verifies a temporary TCP listener' test_starts_tcp_listener_on_free_port
 run_test 'starts and verifies a temporary UDP listener' test_starts_udp_listener_on_free_port
 run_test 'authorizes a temporary listener on a privileged port' test_authorizes_privileged_port
 run_test 'rejects a privileged port when sudo is unavailable' test_rejects_privileged_port_without_sudo
 run_test 'rejects a listener that cannot be verified with ss' test_rejects_unverified_listener_start
+run_test 'retains listener metadata when cleanup fails' test_retains_listener_when_cleanup_fails
 
 printf '\n%s passed, %s failed\n' "$passed" "$failed"
 (( failed == 0 ))
