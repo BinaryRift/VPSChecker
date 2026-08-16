@@ -39,6 +39,7 @@ prepare_repository() {
         lib/report.sh
         lib/report_path.sh
         lib/reputation.sh
+        lib/terminal.sh
         lib/version.sh
         scripts/list-check-host-locations.sh
     )
@@ -88,6 +89,7 @@ test_builds_release_from_matching_tag() (
     [[ $entries == *'vpschecker/LICENSE'* \
         && $entries == *'vpschecker/THIRD_PARTY_NOTICES.md'* \
         && $entries == *'vpschecker/vps-check.sh'* \
+        && $entries == *'vpschecker/lib/terminal.sh'* \
         && $entries != *'build-release.sh'* ]]
 )
 

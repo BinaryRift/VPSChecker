@@ -5,6 +5,8 @@ set -u
 readonly SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck source=lib/version.sh
 . "$SCRIPT_DIR/lib/version.sh"
+# shellcheck source=lib/terminal.sh
+. "$SCRIPT_DIR/lib/terminal.sh"
 # shellcheck source=lib/dependencies.sh
 . "$SCRIPT_DIR/lib/dependencies.sh"
 # shellcheck source=lib/ipquality.sh

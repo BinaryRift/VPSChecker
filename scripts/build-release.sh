@@ -62,6 +62,7 @@ main() {
         lib/report.sh
         lib/report_path.sh
         lib/reputation.sh
+        lib/terminal.sh
         lib/version.sh
         scripts/list-check-host-locations.sh
     )

@@ -40,6 +40,7 @@ create_release_assets() {
         lib/report.sh
         lib/report_path.sh
         lib/reputation.sh
+        lib/terminal.sh
         lib/version.sh
         scripts/list-check-host-locations.sh
     )
@@ -70,6 +71,7 @@ test_installs_verified_release() (
     [[ -f $test_root/work/vpschecker/vps-check.sh \
         && -x $test_root/work/vpschecker/vps-check.sh \
         && -f $test_root/work/vpschecker/lib/report.sh \
+        && -f $test_root/work/vpschecker/lib/terminal.sh \
         && $output == *'VPSChecker installed in'* \
         && $output == *$'\033[1;32mNow you should run: ./vpschecker/vps-check.sh\033[0m'* ]]
 )
