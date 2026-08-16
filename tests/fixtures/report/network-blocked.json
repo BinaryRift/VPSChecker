@@ -1,0 +1,48 @@
+{
+  "provider": "Check-Host",
+  "provider_status": "AVAILABLE",
+  "provider_error": null,
+  "target_country": "ru",
+  "nodes": {
+    "target_region": [
+      {"id": "ru1.node.check-host.net", "country_code": "ru"},
+      {"id": "ru2.node.check-host.net", "country_code": "ru"}
+    ],
+    "control": [
+      {"id": "de1.node.check-host.net", "country_code": "de"}
+    ]
+  },
+  "checks": {
+    "ping": {
+      "complete": true,
+      "results": [],
+      "summary": {
+        "target_region": {"total": 2, "counts": {"REACHABLE": 2}, "status": "REACHABLE"},
+        "control": {"total": 1, "counts": {"REACHABLE": 1}, "status": "REACHABLE"},
+        "regional_difference": false
+      }
+    },
+    "vless_tcp": {
+      "complete": true,
+      "results": [
+        {"node": "ru1.node.check-host.net", "region": "target_region", "status": "UNREACHABLE"},
+        {"node": "ru2.node.check-host.net", "region": "target_region", "status": "UNREACHABLE"},
+        {"node": "de1.node.check-host.net", "region": "control", "status": "UNREACHABLE"}
+      ],
+      "summary": {
+        "target_region": {"total": 2, "counts": {"UNREACHABLE": 2}, "status": "UNREACHABLE"},
+        "control": {"total": 1, "counts": {"UNREACHABLE": 1}, "status": "UNREACHABLE"},
+        "regional_difference": false
+      }
+    },
+    "hysteria2_udp": {
+      "complete": true,
+      "results": [],
+      "summary": {
+        "target_region": {"total": 2, "counts": {"OPEN_OR_FILTERED": 2}, "status": "OPEN_OR_FILTERED"},
+        "control": {"total": 1, "counts": {"OPEN_OR_FILTERED": 1}, "status": "OPEN_OR_FILTERED"},
+        "regional_difference": false
+      }
+    }
+  }
+}

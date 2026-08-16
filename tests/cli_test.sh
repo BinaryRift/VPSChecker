@@ -7,6 +7,7 @@ readonly PROJECT_DIR=$(cd "$TEST_DIR/.." && pwd)
 readonly CLI="$PROJECT_DIR/vps-check.sh"
 readonly OS_RELEASE_FIXTURE="$TEST_DIR/fixtures/os-release.ubuntu"
 readonly MOCK_BIN="$TEST_DIR/fixtures/bin"
+readonly LISTENER_MOCK_BIN="$TEST_DIR/fixtures/listeners/bin"
 
 passed=0
 failed=0
@@ -19,7 +20,8 @@ run_case() {
     shift 3
 
     run_dir=$(mktemp -d) || return 1
-    output=$(cd "$run_dir" && PATH="$MOCK_BIN:$PATH" VPSCHECK_OS_RELEASE_FILE="$OS_RELEASE_FIXTURE" \
+    output=$(cd "$run_dir" && PATH="$LISTENER_MOCK_BIN:$MOCK_BIN:$PATH" \
+        VPSCHECK_OS_RELEASE_FILE="$OS_RELEASE_FIXTURE" \
         "$CLI" "$@" 2>&1)
     status=$?
     for report_dir in "$run_dir/reports" "$run_dir/custom-reports"; do
@@ -66,7 +68,13 @@ run_case 'prints the text report when requested' 0 'VPSChecker report' \
     --ip 203.0.113.10 --print-report
 run_case 'enables temporary listeners by default' 0 'Temporary listeners: enabled' \
     --ip 203.0.113.10
+run_case 'prepares temporary listeners by default' 0 \
+    $'VLESS TCP/443: TEMPORARY\n  Hysteria2 UDP/443: TEMPORARY' \
+    --ip 203.0.113.10
 run_case 'disables temporary listeners on request' 0 'Temporary listeners: disabled' \
+    --ip 203.0.113.10 --no-temporary-listeners
+run_case 'uses no absent listeners when temporary setup is disabled' 0 \
+    $'VLESS TCP/443: NONE\n  Hysteria2 UDP/443: NONE' \
     --ip 203.0.113.10 --no-temporary-listeners
 run_case 'enables automatic package cleanup' 0 'Automatic package cleanup: enabled' \
     --ip 203.0.113.10 --cleanup

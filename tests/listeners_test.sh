@@ -31,19 +31,24 @@ configure_mock_listener() {
     local arguments_path=$2
 
     listener_state() {
-        if [[ -f $state_path ]]; then
+        local protocol=$1
+
+        if [[ -f $state_path.$protocol ]]; then
             printf 'listening\n'
         else
             printf 'not listening\n'
         fi
     }
     timeout() {
-        printf 'timeout %s\n' "$*" > "$arguments_path"
+        printf 'timeout %s\n' "$*" >> "$arguments_path"
         shift 3
         "$@"
     }
     nc() {
-        : > "$state_path"
+        local protocol=tcp
+
+        [[ " $* " == *' -u '* ]] && protocol=udp
+        : > "$state_path.$protocol"
         while :; do
             sleep 1
         done
@@ -78,7 +83,7 @@ test_starts_tcp_listener_on_free_port() (
     local test_root state_path arguments_path pid
 
     test_root=$(mktemp -d) || return 1
-    trap 'rm -rf -- "$test_root"' EXIT
+    trap 'stop_temporary_listeners >/dev/null 2>&1 || true; rm -rf -- "$test_root"' EXIT
     state_path="$test_root/state"
     arguments_path="$test_root/arguments"
     configure_mock_listener "$state_path" "$arguments_path"
@@ -100,7 +105,7 @@ test_starts_udp_listener_on_free_port() (
     local test_root state_path arguments_path pid
 
     test_root=$(mktemp -d) || return 1
-    trap 'rm -rf -- "$test_root"' EXIT
+    trap 'stop_temporary_listeners >/dev/null 2>&1 || true; rm -rf -- "$test_root"' EXIT
     state_path="$test_root/state"
     arguments_path="$test_root/arguments"
     configure_mock_listener "$state_path" "$arguments_path"
@@ -118,7 +123,7 @@ test_authorizes_privileged_port() (
     local test_root state_path arguments_path authorized_path privileged_path pid
 
     test_root=$(mktemp -d) || return 1
-    trap 'rm -rf -- "$test_root"' EXIT
+    trap 'stop_temporary_listeners >/dev/null 2>&1 || true; rm -rf -- "$test_root"' EXIT
     state_path="$test_root/state"
     arguments_path="$test_root/arguments"
     authorized_path="$test_root/authorized"
@@ -207,6 +212,55 @@ test_retains_listener_when_cleanup_fails() (
         && ${TEMPORARY_LISTENER_PORTS[0]} == 8443 ]]
 )
 
+test_prepares_temporary_tcp_and_udp_listeners() (
+    local test_root state_path arguments_path pid
+    local -a listener_pids
+
+    test_root=$(mktemp -d) || return 1
+    trap 'stop_temporary_listeners >/dev/null 2>&1 || true; rm -rf -- "$test_root"' EXIT
+    state_path="$test_root/state"
+    arguments_path="$test_root/arguments"
+    configure_mock_listener "$state_path" "$arguments_path"
+
+    prepare_check_listeners 1 8443 8443 >/dev/null || return 1
+    listener_pids=("${TEMPORARY_LISTENER_PIDS[@]}")
+    [[ $VLESS_LISTENER_SOURCE == TEMPORARY \
+        && $HYSTERIA2_LISTENER_SOURCE == TEMPORARY \
+        && $VLESS_LISTENER_STATE == listening \
+        && $HYSTERIA2_LISTENER_STATE == listening \
+        && ${#listener_pids[@]} -eq 2 \
+        && $(wc -l < "$arguments_path") -eq 2 ]] || return 1
+    stop_temporary_listeners || return 1
+    for pid in "${listener_pids[@]}"; do
+        ! kill -0 "$pid" 2>/dev/null || return 1
+    done
+)
+
+test_disables_temporary_listener_setup() (
+    local called_path
+
+    called_path=$(mktemp) || return 1
+    rm -f -- "$called_path"
+    trap 'rm -f -- "$called_path"' EXIT
+    listener_state() {
+        case $1 in
+            tcp) printf 'listening\n' ;;
+            udp) printf 'not listening\n' ;;
+        esac
+    }
+    nc() {
+        : > "$called_path"
+    }
+
+    prepare_check_listeners 0 443 443 >/dev/null || return 1
+    [[ $VLESS_LISTENER_SOURCE == EXISTING \
+        && $HYSTERIA2_LISTENER_SOURCE == NONE \
+        && $VLESS_LISTENER_STATE == listening \
+        && $HYSTERIA2_LISTENER_STATE == 'not listening' \
+        && ${#TEMPORARY_LISTENER_PIDS[@]} -eq 0 \
+        && ! -e $called_path ]]
+)
+
 run_test 'reuses an existing listener without starting a process' test_reuses_existing_listener
 run_test 'starts and verifies a temporary TCP listener' test_starts_tcp_listener_on_free_port
 run_test 'starts and verifies a temporary UDP listener' test_starts_udp_listener_on_free_port
@@ -214,6 +268,8 @@ run_test 'authorizes a temporary listener on a privileged port' test_authorizes_
 run_test 'rejects a privileged port when sudo is unavailable' test_rejects_privileged_port_without_sudo
 run_test 'rejects a listener that cannot be verified with ss' test_rejects_unverified_listener_start
 run_test 'retains listener metadata when cleanup fails' test_retains_listener_when_cleanup_fails
+run_test 'prepares temporary TCP and UDP listeners together' test_prepares_temporary_tcp_and_udp_listeners
+run_test 'skips temporary listener setup when disabled' test_disables_temporary_listener_setup
 
 printf '\n%s passed, %s failed\n' "$passed" "$failed"
 (( failed == 0 ))

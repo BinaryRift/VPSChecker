@@ -21,8 +21,10 @@ build_report_json() {
     local hysteria2_port=$5
     local vless_listener=$6
     local hysteria2_listener=$7
-    local generated_at=$8
-    local cleanup_requested=${9:-0}
+    local vless_listener_source=$8
+    local hysteria2_listener_source=$9
+    local generated_at=${10}
+    local cleanup_requested=${11:-0}
     local added_packages requested_packages updated_packages cleanup_requested_json
 
     cleanup_requested_json=false
@@ -52,6 +54,8 @@ build_report_json() {
         --argjson hysteria2_port "$hysteria2_port" \
         --arg vless_listener "$vless_listener" \
         --arg hysteria2_listener "$hysteria2_listener" \
+        --arg vless_listener_source "$vless_listener_source" \
+        --arg hysteria2_listener_source "$hysteria2_listener_source" \
         --argjson cleanup_requested "$cleanup_requested_json" \
         --arg tool_version "$VPSCHECK_VERSION" \
         --arg ipquality_version "$IPQUALITY_VERSION" \
@@ -223,12 +227,25 @@ build_report_json() {
                     transport: "tcp",
                     port: $vless_port,
                     local_listener: listener_status($vless_listener),
+                    listener_source: $vless_listener_source,
+                    diagnostics: (
+                        if listener_status($vless_listener) == "LISTENING"
+                            and $target_tcp == "UNREACHABLE"
+                            and $control_tcp == "UNREACHABLE" then
+                            [{
+                                code: "POSSIBLE_FIREWALL_BLOCK",
+                                message: "A local TCP listener was verified, but it was unreachable from all selected Check-Host nodes. Check the OS firewall and hosting-provider inbound rules."
+                            }]
+                        else [] end
+                    ),
                     external: $regional.checks.vless_tcp
                 },
                 hysteria2: {
                     transport: "udp",
                     port: $hysteria2_port,
                     local_listener: listener_status($hysteria2_listener),
+                    listener_source: $hysteria2_listener_source,
+                    diagnostics: [],
                     external: $regional.checks.hysteria2_udp
                 }
             },
@@ -301,8 +318,12 @@ build_text_report() {
         "  Ping target/control: \(.regional_reachability.ping.summary.target_region.status) / \(.regional_reachability.ping.summary.control.status)",
         "",
         "Ports:",
-        "  VLESS TCP/\(.ports.vless.port): local \(.ports.vless.local_listener), target/control \(.ports.vless.external.summary.target_region.status) / \(.ports.vless.external.summary.control.status)",
-        "  Hysteria2 UDP/\(.ports.hysteria2.port): local \(.ports.hysteria2.local_listener), target/control \(.ports.hysteria2.external.summary.target_region.status) / \(.ports.hysteria2.external.summary.control.status)",
+        "  VLESS TCP/\(.ports.vless.port): local \(.ports.vless.local_listener) (\(.ports.vless.listener_source)), target/control \(.ports.vless.external.summary.target_region.status) / \(.ports.vless.external.summary.control.status)",
+        "  Hysteria2 UDP/\(.ports.hysteria2.port): local \(.ports.hysteria2.local_listener) (\(.ports.hysteria2.listener_source)), target/control \(.ports.hysteria2.external.summary.target_region.status) / \(.ports.hysteria2.external.summary.control.status)",
+        (if ((.ports.vless.diagnostics + .ports.hysteria2.diagnostics) | length) > 0 then
+            "Port diagnostics:",
+            ((.ports.vless.diagnostics + .ports.hysteria2.diagnostics)[] | "  - \(.message)")
+         else empty end),
         "",
         "Protocol checks:",
         "  VLESS: TRANSPORT_ONLY; handshake not performed.",
@@ -323,7 +344,32 @@ generate_reports() {
     local hysteria2_listener=$6
     local cleanup_requested=${7:-0}
     local report_dir=${8:-reports}
+    local vless_listener_source=${9:-}
+    local hysteria2_listener_source=${10:-}
     local generated_at report_id json_path text_path json_temp text_temp path
+
+    if [[ -z $vless_listener_source ]]; then
+        if [[ $vless_listener == listening ]]; then
+            vless_listener_source='EXISTING'
+        else
+            vless_listener_source='NONE'
+        fi
+    fi
+    if [[ -z $hysteria2_listener_source ]]; then
+        if [[ $hysteria2_listener == listening ]]; then
+            hysteria2_listener_source='EXISTING'
+        else
+            hysteria2_listener_source='NONE'
+        fi
+    fi
+    case $vless_listener_source in
+        EXISTING|TEMPORARY|NONE) ;;
+        *) return 1 ;;
+    esac
+    case $hysteria2_listener_source in
+        EXISTING|TEMPORARY|NONE) ;;
+        *) return 1 ;;
+    esac
 
     for path in "$IPQUALITY_JSON_PATH" "$VPN_TRUST_JSON_PATH" "$CHECK_HOST_JSON_PATH"; do
         [[ -f $path ]] || {
@@ -351,7 +397,8 @@ generate_reports() {
     REPORT_TEMP_PATHS+=("$text_temp")
 
     build_report_json "$json_temp" "$ip" "$target_country" "$vless_port" \
-        "$hysteria2_port" "$vless_listener" "$hysteria2_listener" "$generated_at" \
+        "$hysteria2_port" "$vless_listener" "$hysteria2_listener" \
+        "$vless_listener_source" "$hysteria2_listener_source" "$generated_at" \
         "$cleanup_requested" || return 1
     build_text_report "$json_temp" "$text_temp" || return 1
     chmod 0600 "$json_temp" "$text_temp" || return 1

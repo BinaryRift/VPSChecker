@@ -350,7 +350,6 @@ main() {
 
     run_preflight "$ip" "$vless_port" "$hysteria2_port" || return 1
     ensure_dependencies || return 1
-    collect_listener_states "$vless_port" "$hysteria2_port"
     if [[ -z $ip ]]; then
         if [[ -n $PREFLIGHT_EXTERNAL_IPV4 ]]; then
             ip=$PREFLIGHT_EXTERNAL_IPV4
@@ -364,11 +363,13 @@ main() {
     prepare_ipquality || return 1
     run_ipquality || return 1
     evaluate_vpn_trust "$IPQUALITY_JSON_PATH" || return 1
+    prepare_check_listeners "$temporary_listeners_enabled" \
+        "$vless_port" "$hysteria2_port" || return 1
     run_check_host "$ip" "$vless_port" "$hysteria2_port" "$country" || return 1
     stop_temporary_listeners || return 1
     generate_reports "$ip" "$country" "$vless_port" "$hysteria2_port" \
         "$VLESS_LISTENER_STATE" "$HYSTERIA2_LISTENER_STATE" "$cleanup_requested" \
-        "$report_dir" || return 1
+        "$report_dir" "$VLESS_LISTENER_SOURCE" "$HYSTERIA2_LISTENER_SOURCE" || return 1
     cleanup_runtime 0
     present_reports "$print_report" || return 1
     (( RUNTIME_CLEANUP_FAILED == 0 ))

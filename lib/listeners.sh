@@ -4,6 +4,8 @@ readonly TEMPORARY_LISTENER_MAX_LIFETIME_SECONDS=180
 PREPARED_LISTENER_SOURCE='NONE'
 PREPARED_LISTENER_PID=''
 PREPARED_LISTENER_PRIVILEGED=0
+VLESS_LISTENER_SOURCE='NONE'
+HYSTERIA2_LISTENER_SOURCE='NONE'
 TEMPORARY_LISTENER_PIDS=()
 TEMPORARY_LISTENER_PRIVILEGES=()
 TEMPORARY_LISTENER_PROTOCOLS=()
@@ -140,6 +142,35 @@ stop_temporary_listeners() {
     TEMPORARY_LISTENER_PROTOCOLS=("${remaining_protocols[@]}")
     TEMPORARY_LISTENER_PORTS=("${remaining_ports[@]}")
     return "$status"
+}
+
+prepare_check_listeners() {
+    local temporary_listeners_enabled=$1
+    local vless_port=$2
+    local hysteria2_port=$3
+
+    [[ $temporary_listeners_enabled == 0 || $temporary_listeners_enabled == 1 ]] || return 1
+    VLESS_LISTENER_SOURCE='NONE'
+    HYSTERIA2_LISTENER_SOURCE='NONE'
+
+    if (( temporary_listeners_enabled == 1 )); then
+        prepare_listener tcp "$vless_port" || return 1
+        VLESS_LISTENER_SOURCE=$PREPARED_LISTENER_SOURCE
+        prepare_listener udp "$hysteria2_port" || return 1
+        HYSTERIA2_LISTENER_SOURCE=$PREPARED_LISTENER_SOURCE
+    fi
+
+    collect_listener_states "$vless_port" "$hysteria2_port"
+    if (( temporary_listeners_enabled == 0 )); then
+        [[ $VLESS_LISTENER_STATE == listening ]] && VLESS_LISTENER_SOURCE='EXISTING'
+        [[ $HYSTERIA2_LISTENER_STATE == listening ]] && HYSTERIA2_LISTENER_SOURCE='EXISTING'
+    fi
+
+    printf '\n'
+    terminal_heading_printf 1 'Listener sources:'
+    printf '\n'
+    printf '  VLESS TCP/%s: %s\n' "$vless_port" "$VLESS_LISTENER_SOURCE"
+    printf '  Hysteria2 UDP/%s: %s\n' "$hysteria2_port" "$HYSTERIA2_LISTENER_SOURCE"
 }
 
 prepare_listener() {

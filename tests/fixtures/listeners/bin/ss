@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+set -u
+
+case " $* " in
+    *' -ltn '*) protocol=tcp ;;
+    *' -lun '*) protocol=udp ;;
+    *) exit 1 ;;
+esac
+
+if [[ -f $PWD/.vpschecker-test-$protocol-listener ]]; then
+    printf 'LISTEN 0 4096 0.0.0.0:443 0.0.0.0:*\n'
+fi

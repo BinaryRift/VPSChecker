@@ -158,6 +158,7 @@ test_stable_report_structure() (
     [[ ${REPORT_JSON_PATH%/*} == "$REPORT_TEST_DIR/reports" ]] || return 1
     [[ $text_report == *'Version: 0.1.0'* ]] || return 1
     [[ $text_report == *'VPN suitability: OK'* ]] || return 1
+    [[ $text_report == *'VLESS TCP/443: local LISTENING (EXISTING)'* ]] || return 1
     [[ $text_report == *'VLESS: TRANSPORT_ONLY'* ]] || return 1
     ! grep -q $'\033' "$REPORT_JSON_PATH" || return 1
     ! grep -q $'\033' "$REPORT_TEXT_PATH" || return 1
@@ -170,6 +171,8 @@ test_stable_report_structure() (
         and .replacement_advice.status == "REPLACEMENT_UNLIKELY"
         and .regional_reachability.target_country == "ru"
         and .ports.vless.local_listener == "LISTENING"
+        and .ports.vless.listener_source == "EXISTING"
+        and .ports.hysteria2.listener_source == "EXISTING"
         and .ports.hysteria2.port == 8443
         and .protocol_checks.vless.handshake_performed == false
         and .cleanup.packages.added == ["jq", "libjq1"]
@@ -423,6 +426,37 @@ test_rejects_report_path_that_is_a_file() (
     rm -f -- "$report_file"
 )
 
+test_records_temporary_listeners_and_accepts_udp_result() (
+    setup_report ok network-ok.json
+    trap cleanup_report_test EXIT
+
+    generate_reports 203.0.113.10 ru 443 8443 listening listening \
+        0 reports TEMPORARY TEMPORARY >/dev/null || return 1
+    jq -e '
+        .ports.vless.listener_source == "TEMPORARY"
+        and .ports.hysteria2.listener_source == "TEMPORARY"
+        and .ports.hysteria2.external.summary.target_region.status == "OPEN_OR_FILTERED"
+        and .replacement_advice.status == "REPLACEMENT_UNLIKELY"
+    ' "$REPORT_JSON_PATH" >/dev/null
+)
+
+test_reports_possible_firewall_block() (
+    local text_report
+
+    setup_report ok network-blocked.json
+    trap cleanup_report_test EXIT
+
+    generate_reports 203.0.113.10 ru 443 8443 listening listening \
+        0 reports TEMPORARY TEMPORARY >/dev/null || return 1
+    text_report=$(< "$REPORT_TEXT_PATH")
+    [[ $text_report == *'Check the OS firewall and hosting-provider inbound rules.'* ]] \
+        || return 1
+    jq -e '
+        .replacement_advice.status == "REPLACEMENT_UNLIKELY"
+        and (.ports.vless.diagnostics | map(.code) | index("POSSIBLE_FIREWALL_BLOCK") != null)
+    ' "$REPORT_JSON_PATH" >/dev/null
+)
+
 run_test 'creates stable JSON and text reports without changing raw IPQuality data' test_stable_report_structure
 run_test 'justifies replacement for independently confirmed poor reputation' test_poor_reputation_justifies_replacement
 run_test 'justifies replacement for a confirmed regional TCP failure' test_confirmed_regional_failure_justifies_replacement
@@ -442,6 +476,10 @@ run_test 'marks requested automatic cleanup as scheduled' test_marks_automatic_c
 run_test 'uses a custom report directory' test_uses_custom_report_directory
 run_test 'uses an absolute report directory' test_uses_absolute_report_directory
 run_test 'rejects a report path that is a file' test_rejects_report_path_that_is_a_file
+run_test 'records temporary listeners and accepts OPEN_OR_FILTERED' \
+    test_records_temporary_listeners_and_accepts_udp_result
+run_test 'reports a possible firewall block for external TCP failures' \
+    test_reports_possible_firewall_block
 
 printf '\n%s passed, %s failed\n' "$passed" "$failed"
 (( failed == 0 ))
