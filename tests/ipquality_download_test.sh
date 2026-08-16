@@ -7,6 +7,7 @@ readonly PROJECT_DIR=$(cd "$TEST_DIR/.." && pwd)
 readonly CLI="$PROJECT_DIR/vps-check.sh"
 readonly FIXTURES_DIR="$TEST_DIR/fixtures"
 readonly MOCK_BIN="$FIXTURES_DIR/bin"
+readonly LISTENER_MOCK_BIN="$FIXTURES_DIR/listeners/bin"
 
 # shellcheck source=../lib/terminal.sh
 . "$PROJECT_DIR/lib/terminal.sh"
@@ -105,7 +106,8 @@ test_cli_exit_trap_cleans_temp() {
 
     path_log=$(mktemp)
     run_dir=$(mktemp -d) || return 1
-    output=$(cd "$run_dir" && PATH="$MOCK_BIN:$PATH" VPSCHECK_MOCK_PATH_LOG="$path_log" \
+    output=$(cd "$run_dir" && PATH="$LISTENER_MOCK_BIN:$MOCK_BIN:$PATH" \
+        VPSCHECK_MOCK_PATH_LOG="$path_log" \
         VPSCHECK_OS_RELEASE_FILE="$FIXTURES_DIR/os-release.ubuntu" \
         "$CLI" --ip 203.0.113.10 2>&1)
     status=$?

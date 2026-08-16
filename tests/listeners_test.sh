@@ -79,6 +79,21 @@ test_reuses_existing_listener() (
         && ! -e $called_path ]]
 )
 
+test_never_stops_existing_process() (
+    local existing_pid
+
+    sleep 30 &
+    existing_pid=$!
+    trap 'kill -TERM "$existing_pid" 2>/dev/null || true; wait "$existing_pid" 2>/dev/null || true' EXIT
+    listener_state() {
+        printf 'listening\n'
+    }
+
+    prepare_listener tcp 443 >/dev/null || return 1
+    stop_temporary_listeners || return 1
+    kill -0 "$existing_pid" 2>/dev/null
+)
+
 test_starts_tcp_listener_on_free_port() (
     local test_root state_path arguments_path pid
 
@@ -265,6 +280,7 @@ test_disables_temporary_listener_setup() (
 )
 
 run_test 'reuses an existing listener without starting a process' test_reuses_existing_listener
+run_test 'never stops an existing process' test_never_stops_existing_process
 run_test 'starts and verifies a temporary TCP listener' test_starts_tcp_listener_on_free_port
 run_test 'starts and verifies a temporary UDP listener' test_starts_udp_listener_on_free_port
 run_test 'authorizes a temporary listener on a privileged port' test_authorizes_privileged_port
