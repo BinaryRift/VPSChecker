@@ -28,7 +28,7 @@ run_test() {
 
 test_loads_semantic_version() (
     load_tool_version "$PROJECT_DIR/VERSION" >/dev/null || return 1
-    [[ $VPSCHECK_VERSION == 0.1.0 ]]
+    [[ $VPSCHECK_VERSION == 0.2.0 ]]
 )
 
 test_rejects_missing_version_file() (
