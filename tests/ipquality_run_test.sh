@@ -6,6 +6,8 @@ readonly TEST_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 readonly PROJECT_DIR=$(cd "$TEST_DIR/.." && pwd)
 readonly MOCK_IPQUALITY="$TEST_DIR/fixtures/ipquality/mock.sh"
 
+# shellcheck source=../lib/terminal.sh
+. "$PROJECT_DIR/lib/terminal.sh"
 # shellcheck source=../lib/ipquality.sh
 . "$PROJECT_DIR/lib/ipquality.sh"
 

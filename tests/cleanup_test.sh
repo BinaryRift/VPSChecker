@@ -5,6 +5,8 @@ set -u
 readonly TEST_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 readonly PROJECT_DIR=$(cd "$TEST_DIR/.." && pwd)
 
+# shellcheck source=../lib/terminal.sh
+. "$PROJECT_DIR/lib/terminal.sh"
 # shellcheck source=../lib/dependencies.sh
 . "$PROJECT_DIR/lib/dependencies.sh"
 # shellcheck source=../lib/cleanup.sh
@@ -185,6 +187,25 @@ test_cleanup_hint_uses_argument_free_command() (
     rmdir -- "$case_dir"
 )
 
+test_cleanup_hint_colors_the_command() (
+    local case_dir output
+
+    case_dir=$(mktemp -d) || return 1
+    CLEANUP_PLAN_PATH="$case_dir/.vpschecker-cleanup.plan"
+    printf 'jq\n' > "$CLEANUP_PLAN_PATH"
+    VPSCHECK_COMMAND_PATH=./vps-check.sh
+    terminal_stream_is_tty() {
+        return 0
+    }
+    TERM=xterm
+    unset NO_COLOR
+
+    output=$(print_cleanup_hint) || return 1
+    [[ $output == *$'\033[1m\033[92m./vps-check.sh cleanup\033[0m'* ]] || return 1
+    rm -f -- "$CLEANUP_PLAN_PATH"
+    rmdir -- "$case_dir"
+)
+
 test_runtime_defers_cleanup_by_default() (
     local case_dir
     local execute_called=0
@@ -266,6 +287,7 @@ run_test 'saves and merges a cleanup plan' test_saves_and_merges_cleanup_plan
 run_test 'cleanup command uses the saved plan' test_cleanup_command_uses_saved_plan
 run_test 'cancelled cleanup keeps the saved plan' test_cancelled_cleanup_keeps_plan
 run_test 'cleanup hint uses a command without package arguments' test_cleanup_hint_uses_argument_free_command
+run_test 'cleanup hint highlights the command in a terminal' test_cleanup_hint_colors_the_command
 run_test 'defers package cleanup by default' test_runtime_defers_cleanup_by_default
 run_test 'uses automatic package cleanup when requested' test_runtime_uses_automatic_cleanup_flag
 

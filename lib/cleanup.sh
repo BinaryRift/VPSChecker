@@ -6,8 +6,9 @@ CLEANUP_PLAN_TEMP_PATH=''
 PENDING_CLEANUP_PACKAGES=()
 
 cleanup_usage() {
+    terminal_heading_printf 1 'Usage:'
     cat <<'EOF'
-Usage:
+
   vps-check.sh cleanup
 
 Safely remove packages recorded in .vpschecker-cleanup.plan in the current
@@ -43,7 +44,7 @@ save_dependency_cleanup_plan() {
     (( ${#DEPENDENCY_ADDED_PACKAGES[@]} > 0 )) || return 0
     [[ -n ${CLEANUP_PLAN_PATH:-} ]] || set_cleanup_plan_path
     [[ ! -L $CLEANUP_PLAN_PATH ]] || {
-        printf 'Warning: refusing to replace a symbolic-link cleanup plan.\n' >&2
+        terminal_warning 'refusing to replace a symbolic-link cleanup plan.'
         return 1
     }
 
@@ -71,7 +72,9 @@ print_cleanup_hint() {
     [[ -f ${CLEANUP_PLAN_PATH:-} ]] || return 0
     printf '\nAPT packages added by VPSChecker were kept.\n'
     printf 'To remove them safely from this directory, run:\n  '
-    printf '%q cleanup\n' "$command_path"
+    terminal_printf 1 "$TERMINAL_STYLE_BOLD$TERMINAL_COLOR_BRIGHT_GREEN" \
+        '%q cleanup' "$command_path"
+    printf '\n'
 }
 
 remove_cleanup_plan() {
@@ -83,15 +86,15 @@ remove_cleanup_plan() {
 
 check_cleanup_requirements() {
     command -v dpkg-query >/dev/null 2>&1 || {
-        printf 'Error: dpkg-query is required for package cleanup.\n' >&2
+        terminal_error 'dpkg-query is required for package cleanup.'
         return 1
     }
     command -v apt-get >/dev/null 2>&1 || {
-        printf 'Error: apt-get is required for package cleanup.\n' >&2
+        terminal_error 'apt-get is required for package cleanup.'
         return 1
     }
     can_install_packages || {
-        printf 'Error: package cleanup requires root or the sudo command.\n' >&2
+        terminal_error 'package cleanup requires root or the sudo command.'
         return 1
     }
 }
@@ -100,7 +103,7 @@ execute_cleanup_plan() {
     local ask_confirmation=$1
 
     load_cleanup_plan || {
-        printf 'Error: no valid cleanup plan exists in the current directory.\n' >&2
+        terminal_error 'no valid cleanup plan exists in the current directory.'
         return 1
     }
     check_cleanup_requirements || return 1
@@ -112,7 +115,7 @@ execute_cleanup_plan() {
 
 run_dependency_cleanup_command() {
     (( $# == 0 )) || {
-        printf 'Error: the cleanup command does not accept arguments.\n' >&2
+        terminal_error 'the cleanup command does not accept arguments.'
         return 2
     }
     [[ -n ${CLEANUP_PLAN_PATH:-} ]] || set_cleanup_plan_path
@@ -184,7 +187,7 @@ cleanup_runtime() {
     cleanup_ipquality_temp
     if ! finalize_report_cleanup "$package_status"; then
         RUNTIME_CLEANUP_FAILED=1
-        printf 'Warning: could not finalize cleanup status in the reports.\n' >&2
+        terminal_warning 'could not finalize cleanup status in the reports.'
     fi
     cleanup_report_temp
     if [[ -n ${CLEANUP_PLAN_TEMP_PATH:-} && -f $CLEANUP_PLAN_TEMP_PATH ]]; then

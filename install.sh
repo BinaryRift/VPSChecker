@@ -10,7 +10,11 @@ readonly INSTALL_DIRECTORY="$PWD/vpschecker"
 INSTALL_TEMP_DIRECTORY=''
 
 fail() {
-    printf 'Error: %s\n' "$1" >&2
+    if [[ -t 2 && ! -v NO_COLOR && ${TERM:-} != dumb ]]; then
+        printf '\033[31mError:\033[0m %s\n' "$1" >&2
+    else
+        printf 'Error: %s\n' "$1" >&2
+    fi
     exit 1
 }
 
@@ -122,7 +126,11 @@ main() {
     mv -- "$source_directory" "$INSTALL_DIRECTORY"
 
     printf 'VPSChecker installed in %s\n' "$INSTALL_DIRECTORY"
-    printf '\033[1;32mNow you should run: ./vpschecker/vps-check.sh\033[0m\n'
+    # shellcheck source=lib/terminal.sh
+    . "$INSTALL_DIRECTORY/lib/terminal.sh"
+    terminal_printf 1 "$TERMINAL_STYLE_BOLD$TERMINAL_COLOR_BRIGHT_GREEN" \
+        'Now you should run: ./vpschecker/vps-check.sh'
+    printf '\n'
 }
 
 main "$@"

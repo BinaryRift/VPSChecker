@@ -49,6 +49,36 @@ terminal_status_printf() {
     terminal_printf "$fd" "$style" '%s' "$status"
 }
 
+terminal_message() {
+    local fd=$1
+    local style=$2
+    local label=$3
+    local format=$4
+    local status=0
+    shift 4
+
+    terminal_printf "$fd" "$style" '%s:' "$label" || status=$?
+    printf ' ' >&"$fd" || status=$?
+    printf "$format" "$@" >&"$fd" || status=$?
+    printf '\n' >&"$fd" || status=$?
+    return "$status"
+}
+
+terminal_error() {
+    terminal_message 2 "$TERMINAL_COLOR_RED" Error "$@"
+}
+
+terminal_warning() {
+    terminal_message 2 "$TERMINAL_COLOR_YELLOW" Warning "$@"
+}
+
+terminal_heading_printf() {
+    local fd=$1
+    shift
+
+    terminal_printf "$fd" "$TERMINAL_STYLE_BOLD" "$@"
+}
+
 terminal_printf() {
     local fd=$1
     local style=$2

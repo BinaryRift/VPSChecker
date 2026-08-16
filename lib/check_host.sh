@@ -344,7 +344,9 @@ print_check_host_summary() {
     IFS=$'\037' read -r provider_status provider_error target_country target_nodes control_nodes \
         ping_target ping_control tcp_target tcp_control udp_target udp_control <<< "$summary"
 
-    printf '\nCheck-Host regional checks:\n'
+    printf '\n'
+    terminal_heading_printf 1 'Check-Host regional checks:'
+    printf '\n'
     if [[ $provider_status == UNKNOWN ]]; then
         printf '  Provider: '
         terminal_status_printf 1 "$provider_status" || return 1
@@ -377,7 +379,7 @@ run_check_host() {
     cleanup_check_host_temp
     CHECK_HOST_TEMP_DIR="$IPQUALITY_TEMP_DIR/check-host"
     mkdir -m 0700 -- "$CHECK_HOST_TEMP_DIR" || {
-        printf 'Error: could not create the Check-Host temporary directory.\n' >&2
+        terminal_error 'could not create the Check-Host temporary directory.'
         CHECK_HOST_TEMP_DIR=''
         return 1
     }

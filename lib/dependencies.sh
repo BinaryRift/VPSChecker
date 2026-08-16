@@ -155,35 +155,35 @@ install_missing_dependencies() {
     local before_snapshot before_versions install_status package
 
     can_install_packages || {
-        printf 'Error: installing dependencies requires root or the sudo command.\n' >&2
+        terminal_error 'installing dependencies requires root or the sudo command.'
         return 1
     }
     command -v apt-get >/dev/null 2>&1 || {
-        printf 'Error: apt-get is required to install dependencies.\n' >&2
+        terminal_error 'apt-get is required to install dependencies.'
         return 1
     }
 
     before_snapshot=$(installed_package_names) || {
-        printf 'Error: could not snapshot installed packages.\n' >&2
+        terminal_error 'could not snapshot installed packages.'
         return 1
     }
     before_versions=$(installed_package_versions) || {
-        printf 'Error: could not snapshot installed package versions.\n' >&2
+        terminal_error 'could not snapshot installed package versions.'
         return 1
     }
     create_dependency_journal "$before_snapshot" || {
-        printf 'Error: could not create the dependency change journal.\n' >&2
+        terminal_error 'could not create the dependency change journal.'
         return 1
     }
 
     printf 'Updating APT package indexes...\n'
     run_apt_get update || {
-        printf 'Error: apt-get update failed.\n' >&2
+        terminal_error 'apt-get update failed.'
         return 1
     }
 
     plan_dependency_installation || {
-        printf 'Error: could not determine the dependency installation plan.\n' >&2
+        terminal_error 'could not determine the dependency installation plan.'
         return 1
     }
 
@@ -193,17 +193,17 @@ install_missing_dependencies() {
         "${DEPENDENCY_REQUESTED_PACKAGES[@]}" || install_status=$?
 
     record_package_changes "$before_versions" || {
-        printf 'Error: could not record dependency changes.\n' >&2
+        terminal_error 'could not record dependency changes.'
         return 1
     }
     (( install_status == 0 )) || {
-        printf 'Error: apt-get install failed.\n' >&2
+        terminal_error 'apt-get install failed.'
         return "$install_status"
     }
 
     for package in "${DEPENDENCY_REQUESTED_PACKAGES[@]}"; do
         package_installed "$package" || {
-            printf 'Error: package was not installed: %s\n' "$package" >&2
+            terminal_error 'package was not installed: %s' "$package"
             return 1
         }
     done
@@ -233,7 +233,7 @@ defer_added_dependencies() {
     [[ -n ${DEPENDENCY_JOURNAL_DIR:-} ]] || return 0
     refresh_added_dependencies || {
         DEPENDENCY_CLEANUP_STATUS='FAILED'
-        printf 'Warning: could not determine which packages were added; automatic cleanup remains disabled.\n' >&2
+        terminal_warning 'could not determine which packages were added; automatic cleanup remains disabled.'
         return 1
     }
     (( ${#DEPENDENCY_ADDED_PACKAGES[@]} > 0 )) || return 0
@@ -253,7 +253,7 @@ cleanup_package_list() {
     for package in "$@"; do
         is_valid_package_name "$package" || {
             DEPENDENCY_CLEANUP_STATUS='FAILED'
-            printf 'Warning: invalid package name in the cleanup plan: %s\n' "$package" >&2
+            terminal_warning 'invalid package name in the cleanup plan: %s' "$package"
             return 1
         }
         package_installed "$package" || continue
@@ -267,14 +267,16 @@ cleanup_package_list() {
 
     if (( ${#cleanup_packages[@]} == 0 )); then
         DEPENDENCY_CLEANUP_STATUS='NOT_REQUIRED'
-        printf '\nCleanup: none of the listed APT packages are installed.\n'
+        printf '\n'
+        terminal_heading_printf 1 'Cleanup:'
+        printf ' none of the listed APT packages are installed.\n'
         return 0
     fi
 
     simulation=$(run_apt_get --simulate -o APT::Get::AutomaticRemove=false \
         remove -y "${cleanup_packages[@]}" 2>&1) || {
         DEPENDENCY_CLEANUP_STATUS='FAILED'
-        printf 'Warning: APT could not simulate dependency cleanup; no packages were removed.\n' >&2
+        terminal_warning 'APT could not simulate dependency cleanup; no packages were removed.'
         return 1
     }
     removals=$(printf '%s\n' "$simulation" | awk '$1 == "Remv" { print $2 }' | LC_ALL=C sort -u)
@@ -282,7 +284,7 @@ cleanup_package_list() {
     if [[ $removals != "$expected" ]] \
         || printf '%s\n' "$simulation" | awk '$1 == "Inst" || $1 == "Conf" { found = 1 } END { exit !found }'; then
         DEPENDENCY_CLEANUP_STATUS='SKIPPED_UNSAFE'
-        printf 'Warning: the APT cleanup plan is not limited to the recorded removal set; cleanup was skipped.\n' >&2
+        terminal_warning 'the APT cleanup plan is not limited to the recorded removal set; cleanup was skipped.'
         return 1
     fi
 
@@ -302,17 +304,19 @@ cleanup_package_list() {
         esac
     fi
 
-    printf '\nCleanup: removing packages added by this run: %s\n' "${cleanup_packages[*]}"
+    printf '\n'
+    terminal_heading_printf 1 'Cleanup:'
+    printf ' removing packages added by this run: %s\n' "${cleanup_packages[*]}"
     run_apt_get -o APT::Get::AutomaticRemove=false remove -y \
         "${cleanup_packages[@]}" || {
         DEPENDENCY_CLEANUP_STATUS='FAILED'
-        printf 'Warning: APT could not remove all packages added by this run.\n' >&2
+        terminal_warning 'APT could not remove all packages added by this run.'
         return 1
     }
     for package in "${cleanup_packages[@]}"; do
         if package_installed "$package"; then
             DEPENDENCY_CLEANUP_STATUS='FAILED'
-            printf 'Warning: package remains installed after cleanup: %s\n' "$package" >&2
+            terminal_warning 'package remains installed after cleanup: %s' "$package"
             return 1
         fi
     done
@@ -325,17 +329,21 @@ ensure_dependencies() {
     local answer
 
     command -v dpkg-query >/dev/null 2>&1 || {
-        printf 'Error: dpkg-query is required to inspect APT packages.\n' >&2
+        terminal_error 'dpkg-query is required to inspect APT packages.'
         return 1
     }
 
     collect_missing_dependencies
     if (( ${#DEPENDENCY_REQUESTED_PACKAGES[@]} == 0 )); then
-        printf '\nDependencies: all required APT packages are already installed.\n'
+        printf '\n'
+        terminal_heading_printf 1 'Dependencies:'
+        printf ' all required APT packages are already installed.\n'
         return 0
     fi
 
-    printf '\nMissing APT packages: %s\n' "${DEPENDENCY_REQUESTED_PACKAGES[*]}"
+    printf '\n'
+    terminal_heading_printf 1 'Missing APT packages:'
+    printf ' %s\n' "${DEPENDENCY_REQUESTED_PACKAGES[*]}"
     printf 'Run apt-get update and install only these packages? [y/N] '
     if ! read -r answer; then
         answer=''

@@ -327,7 +327,7 @@ generate_reports() {
 
     for path in "$IPQUALITY_JSON_PATH" "$VPN_TRUST_JSON_PATH" "$CHECK_HOST_JSON_PATH"; do
         [[ -f $path ]] || {
-            printf 'Error: a required report input is unavailable.\n' >&2
+            terminal_error 'a required report input is unavailable.'
             return 1
         }
     done
@@ -341,7 +341,7 @@ generate_reports() {
     json_path="$REPORT_OUTPUT_DIR/vpschecker-report-$report_id.json"
     text_path="$REPORT_OUTPUT_DIR/vpschecker-report-$report_id.txt"
     [[ ! -e $json_path && ! -e $text_path ]] || {
-        printf 'Error: report output files already exist.\n' >&2
+        terminal_error 'report output files already exist.'
         return 1
     }
 
@@ -371,7 +371,7 @@ present_reports() {
     local summary vpn_trust replacement_advice
 
     [[ -f ${REPORT_JSON_PATH:-} && -f ${REPORT_TEXT_PATH:-} ]] || {
-        printf 'Error: final reports are unavailable.\n' >&2
+        terminal_error 'final reports are unavailable.'
         return 1
     }
     if (( print_report == 1 )); then
@@ -384,21 +384,26 @@ present_reports() {
         ] | @tsv' "$REPORT_JSON_PATH") || return 1
         IFS=$'\t' read -r vpn_trust replacement_advice <<< "$summary"
 
-        printf '\nResult:\n'
+        printf '\n'
+        terminal_heading_printf 1 'Result:'
+        printf '\n'
         printf '  VPN suitability: '
         terminal_status_printf 1 "$vpn_trust" || return 1
         printf '\n  Replacement advice: '
         terminal_status_printf 1 "$replacement_advice" || return 1
         printf '\n'
-        jq -r '
-            if (.vpn_suitability.manual_checks | length) > 0 then
-                "",
-                "Manual verification:",
-                (.vpn_suitability.manual_checks[] | "  \(.service): \(.url)")
-            else empty end
-        ' "$REPORT_JSON_PATH" || return 1
+        summary=$(jq -r '
+            .vpn_suitability.manual_checks[]? | "  \(.service): \(.url)"
+        ' "$REPORT_JSON_PATH") || return 1
+        if [[ -n $summary ]]; then
+            printf '\n'
+            terminal_heading_printf 1 'Manual verification:'
+            printf '\n%s\n' "$summary"
+        fi
     fi
-    printf '\nReports:\n'
+    printf '\n'
+    terminal_heading_printf 1 'Reports:'
+    printf '\n'
     printf '  JSON: %s\n' "$REPORT_JSON_PATH"
     printf '  Text: %s\n' "$REPORT_TEXT_PATH"
 }

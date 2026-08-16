@@ -5,6 +5,8 @@ set -u
 readonly TEST_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 readonly PROJECT_DIR=$(cd "$TEST_DIR/.." && pwd)
 
+# shellcheck source=../lib/terminal.sh
+. "$PROJECT_DIR/lib/terminal.sh"
 # shellcheck source=../lib/version.sh
 . "$PROJECT_DIR/lib/version.sh"
 

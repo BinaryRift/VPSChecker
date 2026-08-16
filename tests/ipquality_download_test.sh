@@ -8,6 +8,8 @@ readonly CLI="$PROJECT_DIR/vps-check.sh"
 readonly FIXTURES_DIR="$TEST_DIR/fixtures"
 readonly MOCK_BIN="$FIXTURES_DIR/bin"
 
+# shellcheck source=../lib/terminal.sh
+. "$PROJECT_DIR/lib/terminal.sh"
 # shellcheck source=../lib/ipquality.sh
 . "$PROJECT_DIR/lib/ipquality.sh"
 

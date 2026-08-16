@@ -5,6 +5,7 @@ set -u
 readonly TEST_DIRECTORY=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 readonly PROJECT_DIRECTORY=$(cd "$TEST_DIRECTORY/.." && pwd)
 readonly FIXTURE_BIN="$TEST_DIRECTORY/fixtures/install/bin"
+readonly TEST_BASH=$(command -v bash)
 
 passed=0
 failed=0
@@ -47,7 +48,11 @@ create_release_assets() {
 
     mkdir -p "$archive_root/lib" "$archive_root/scripts" "$root_directory/assets"
     for path in "${required_files[@]}"; do
-        printf 'fixture: %s\n' "$path" > "$archive_root/$path"
+        if [[ $path == lib/terminal.sh ]]; then
+            cp "$PROJECT_DIRECTORY/lib/terminal.sh" "$archive_root/$path"
+        else
+            printf 'fixture: %s\n' "$path" > "$archive_root/$path"
+        fi
     done
     tar -czf "$archive_path" -C "$root_directory/package" vpschecker
     checksum=$(sha256sum "$archive_path" | awk '{ print $1 }')
@@ -73,7 +78,8 @@ test_installs_verified_release() (
         && -f $test_root/work/vpschecker/lib/report.sh \
         && -f $test_root/work/vpschecker/lib/terminal.sh \
         && $output == *'VPSChecker installed in'* \
-        && $output == *$'\033[1;32mNow you should run: ./vpschecker/vps-check.sh\033[0m'* ]]
+        && $output == *'Now you should run: ./vpschecker/vps-check.sh'* \
+        && $output != *$'\033['* ]]
 )
 
 test_rejects_checksum_mismatch() (
@@ -120,7 +126,7 @@ test_reports_missing_gzip() (
     ln -s "$(command -v tar)" "$test_root/bin/tar"
 
     output=$(cd "$test_root/work" && \
-        PATH="$test_root/bin" /bin/bash "$PROJECT_DIRECTORY/install.sh" 2>&1)
+        PATH="$test_root/bin" "$TEST_BASH" "$PROJECT_DIRECTORY/install.sh" 2>&1)
     status=$?
     [[ $status -ne 0 && $output == *'required command is unavailable: gzip'* ]]
 )

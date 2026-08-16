@@ -1,6 +1,7 @@
 usage() {
+    terminal_heading_printf 1 'Usage:'
     cat <<'EOF'
-Usage:
+
   vps-check.sh [OPTIONS]
   vps-check.sh cleanup
   vps-check.sh list-locations
@@ -20,7 +21,7 @@ EOF
 }
 
 fail_usage() {
-    printf 'Error: %s\n' "$1" >&2
+    terminal_error '%s' "$1"
     printf 'Run %s --help for usage.\n' "${0##*/}" >&2
     exit "$EXIT_USAGE"
 }

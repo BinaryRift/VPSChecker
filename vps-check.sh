@@ -182,7 +182,9 @@ run_preflight() {
     local failed=0
 
     PREFLIGHT_EXTERNAL_IPV4=''
-    printf '\nPreflight:\n'
+    printf '\n'
+    terminal_heading_printf 1 'Preflight:'
+    printf '\n'
 
     if os_info=$(read_os_info "$os_release_file"); then
         IFS=$'\t' read -r os_id os_version os_name <<< "$os_info"
@@ -211,18 +213,24 @@ run_preflight() {
         printf '  External IPv4: unavailable (will retry after dependency setup)\n'
     fi
 
-    printf '  Commands:\n'
+    printf '  '
+    terminal_heading_printf 1 'Commands:'
+    printf '\n'
     for command in "${CHECKED_COMMANDS[@]}"; do
         printf '    %s: %s\n' "$command" "$(command_state "$command")"
     done
 
-    printf '  APT packages:\n'
+    printf '  '
+    terminal_heading_printf 1 'APT packages:'
+    printf '\n'
     for package in "${CHECKED_PACKAGES[@]}"; do
         printf '    %s: %s\n' "$package" "$(package_state "$package")"
     done
 
     collect_listener_states "$vless_port" "$hysteria2_port"
-    printf '  Local listeners:\n'
+    printf '  '
+    terminal_heading_printf 1 'Local listeners:'
+    printf '\n'
     printf '    VLESS TCP/%s: %s\n' "$vless_port" "$VLESS_LISTENER_STATE"
     printf '    Hysteria2 UDP/%s: %s\n' "$hysteria2_port" "$HYSTERIA2_LISTENER_STATE"
 
@@ -370,7 +378,7 @@ main() {
         elif ip=$(detect_external_ipv4); then
             printf '\nExternal IPv4 after dependency setup: %s\n' "$ip"
         else
-            printf 'Error: external IPv4 is unavailable after dependency setup.\n' >&2
+            terminal_error 'external IPv4 is unavailable after dependency setup.'
             return 1
         fi
     fi

@@ -20,15 +20,15 @@ evaluate_vpn_trust() {
     local output_path temporary_path
 
     [[ -f $raw_json_path ]] || {
-        printf 'Error: IPQuality JSON is unavailable for reputation evaluation.\n' >&2
+        terminal_error 'IPQuality JSON is unavailable for reputation evaluation.'
         return 1
     }
     [[ -n ${IPQUALITY_TEMP_DIR:-} && -d $IPQUALITY_TEMP_DIR ]] || {
-        printf 'Error: the temporary result directory is unavailable.\n' >&2
+        terminal_error 'the temporary result directory is unavailable.'
         return 1
     }
     command -v jq >/dev/null 2>&1 || {
-        printf 'Error: jq is required to evaluate IP reputation.\n' >&2
+        terminal_error 'jq is required to evaluate IP reputation.'
         return 1
     }
 
@@ -178,18 +178,18 @@ evaluate_vpn_trust() {
           }
     ' "$raw_json_path" > "$temporary_path"; then
         rm -f -- "$temporary_path"
-        printf 'Error: could not evaluate IPQuality reputation data.\n' >&2
+        terminal_error 'could not evaluate IPQuality reputation data.'
         return 1
     fi
 
     chmod 0600 "$temporary_path" 2>/dev/null || {
         rm -f -- "$temporary_path"
-        printf 'Error: could not restrict permissions on the reputation result.\n' >&2
+        terminal_error 'could not restrict permissions on the reputation result.'
         return 1
     }
     mv -- "$temporary_path" "$output_path" || {
         rm -f -- "$temporary_path"
-        printf 'Error: could not save the reputation result.\n' >&2
+        terminal_error 'could not save the reputation result.'
         return 1
     }
     VPN_TRUST_TEMP_PATH=''
@@ -197,7 +197,7 @@ evaluate_vpn_trust() {
     VPN_TRUST_STATUS=$(jq -er '.vpn_trust | select(. == "OK" or . == "WARNING" or . == "POOR" or . == "UNKNOWN")' \
         "$output_path") || {
         rm -f -- "$output_path"
-        printf 'Error: the reputation evaluator produced an invalid result.\n' >&2
+        terminal_error 'the reputation evaluator produced an invalid result.'
         return 1
     }
     VPN_TRUST_JSON_PATH=$output_path

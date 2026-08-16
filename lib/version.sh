@@ -5,15 +5,15 @@ load_tool_version() {
     local version
 
     [[ -r $version_file ]] || {
-        printf 'Error: VERSION file is unavailable.\n' >&2
+        terminal_error 'VERSION file is unavailable.'
         return 1
     }
     IFS= read -r version < "$version_file" || {
-        printf 'Error: VERSION file is empty.\n' >&2
+        terminal_error 'VERSION file is empty.'
         return 1
     }
     [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]] || {
-        printf 'Error: VERSION does not contain a valid semantic version.\n' >&2
+        terminal_error 'VERSION does not contain a valid semantic version.'
         return 1
     }
     VPSCHECK_VERSION=$version

@@ -2,12 +2,17 @@
 
 set -u
 
+readonly SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 readonly CHECK_HOST_NODES_URL=https://check-host.net/nodes/hosts
+
+# shellcheck source=../lib/terminal.sh
+. "$SCRIPT_DIR/../lib/terminal.sh"
 
 usage() {
     local command_name=${VPSCHECK_LOCATIONS_COMMAND:-list-check-host-locations.sh}
 
-    printf 'Usage:\n  %s\n\n' "$command_name"
+    terminal_heading_printf 1 'Usage:'
+    printf '\n  %s\n\n' "$command_name"
     cat <<'EOF'
 Lists the countries currently represented by Check-Host nodes. Country codes
 can be passed to vps-check.sh with --country.
@@ -15,7 +20,7 @@ EOF
 }
 
 fail() {
-    printf 'Error: %s\n' "$1" >&2
+    terminal_error '%s' "$1"
     return 1
 }
 
@@ -74,7 +79,7 @@ main() {
         return 0
     fi
     if (( $# > 0 )); then
-        printf 'Error: this command does not accept arguments.\n' >&2
+        terminal_error 'this command does not accept arguments.'
         usage >&2
         return 2
     fi

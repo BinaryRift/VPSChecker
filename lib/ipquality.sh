@@ -56,16 +56,16 @@ pin_ipquality_resources() {
 
 prepare_ipquality() {
     command -v curl >/dev/null 2>&1 || {
-        printf 'Error: curl is required to download IPQuality.\n' >&2
+        terminal_error 'curl is required to download IPQuality.'
         return 1
     }
     command -v sha256sum >/dev/null 2>&1 || {
-        printf 'Error: sha256sum is required to verify IPQuality.\n' >&2
+        terminal_error 'sha256sum is required to verify IPQuality.'
         return 1
     }
 
     IPQUALITY_TEMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/vpschecker.XXXXXX") || {
-        printf 'Error: could not create a temporary directory.\n' >&2
+        terminal_error 'could not create a temporary directory.'
         return 1
     }
     IPQUALITY_SOURCE_PATH="$IPQUALITY_TEMP_DIR/ipquality.source.sh"
@@ -75,29 +75,31 @@ prepare_ipquality() {
         --proto '=https' --tlsv1.2 --connect-timeout 10 --max-time 60 \
         --retry 2 --retry-delay 1 --output "$IPQUALITY_SOURCE_PATH" \
         "$IPQUALITY_URL"; then
-        printf 'Error: could not download pinned IPQuality source.\n' >&2
+        terminal_error 'could not download pinned IPQuality source.'
         cleanup_ipquality_temp
         return 1
     fi
 
     if ! verify_ipquality_checksum "$IPQUALITY_SOURCE_PATH" "$IPQUALITY_SHA256"; then
-        printf 'Error: IPQuality checksum mismatch; the file will not be used.\n' >&2
+        terminal_error 'IPQuality checksum mismatch; the file will not be used.'
         cleanup_ipquality_temp
         return 1
     fi
 
     if ! pin_ipquality_resources "$IPQUALITY_SOURCE_PATH" "$IPQUALITY_SCRIPT_PATH"; then
-        printf 'Error: could not pin IPQuality runtime resources.\n' >&2
+        terminal_error 'could not pin IPQuality runtime resources.'
         cleanup_ipquality_temp
         return 1
     fi
     chmod 0600 "$IPQUALITY_SOURCE_PATH" "$IPQUALITY_SCRIPT_PATH" || {
-        printf 'Error: could not restrict permissions on IPQuality files.\n' >&2
+        terminal_error 'could not restrict permissions on IPQuality files.'
         cleanup_ipquality_temp
         return 1
     }
 
-    printf '\nIPQuality source:\n'
+    printf '\n'
+    terminal_heading_printf 1 'IPQuality source:'
+    printf '\n'
     printf '  Version: %s\n' "$IPQUALITY_VERSION"
     printf '  Commit: %s\n' "$IPQUALITY_COMMIT"
     printf '  SHA-256: verified\n'
@@ -109,11 +111,11 @@ run_ipquality() {
     local valid_json=0
 
     [[ -f $IPQUALITY_SCRIPT_PATH ]] || {
-        printf 'Error: verified IPQuality runtime source is unavailable.\n' >&2
+        terminal_error 'verified IPQuality runtime source is unavailable.'
         return 1
     }
     command -v jq >/dev/null 2>&1 || {
-        printf 'Error: jq is required to validate the IPQuality result.\n' >&2
+        terminal_error 'jq is required to validate the IPQuality result.'
         return 1
     }
 
@@ -131,13 +133,13 @@ run_ipquality() {
     if (( status != 0 && (status != 1 || valid_json == 0) )); then
         rm -f -- "$IPQUALITY_JSON_PATH"
         IPQUALITY_JSON_PATH=''
-        printf 'Error: IPQuality exited with status %s.\n' "$status" >&2
+        terminal_error 'IPQuality exited with status %s.' "$status"
         return "$status"
     fi
     if (( valid_json == 0 )); then
         rm -f -- "$IPQUALITY_JSON_PATH"
         IPQUALITY_JSON_PATH=''
-        printf 'Error: IPQuality did not produce a valid JSON object.\n' >&2
+        terminal_error 'IPQuality did not produce a valid JSON object.'
         return 1
     fi
 
