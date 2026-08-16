@@ -14,6 +14,8 @@ Options:
   --report-dir PATH      Report directory relative to the current directory
                          or an absolute path (default: ./reports).
   --print-report          Also print the text report to the terminal.
+  --no-temporary-listeners
+                         Do not start temporary listeners on free ports.
   --cleanup               Remove pending VPSChecker APT packages on exit.
   --version               Show the VPSChecker version.
   -h, --help             Show this help.

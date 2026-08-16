@@ -64,9 +64,13 @@ run_case 'accepts a custom report directory' 0 '/custom-reports/vpschecker-repor
     --ip 203.0.113.10 --report-dir custom-reports
 run_case 'prints the text report when requested' 0 'VPSChecker report' \
     --ip 203.0.113.10 --print-report
+run_case 'enables temporary listeners by default' 0 'Temporary listeners: enabled' \
+    --ip 203.0.113.10
+run_case 'disables temporary listeners on request' 0 'Temporary listeners: disabled' \
+    --ip 203.0.113.10 --no-temporary-listeners
 run_case 'enables automatic package cleanup' 0 'Automatic package cleanup: enabled' \
     --ip 203.0.113.10 --cleanup
-run_case 'shows help' 0 'Usage:' --help
+run_case 'shows temporary listener help' 0 '--no-temporary-listeners' --help
 run_case 'shows the tool version' 0 'VPSChecker 0.2.0' --version
 run_case 'shows cleanup command help' 0 'Safely remove packages recorded' cleanup --help
 run_case 'reports a missing cleanup plan' 1 'no valid cleanup plan' cleanup
@@ -98,6 +102,9 @@ run_case 'rejects a duplicate country option' 2 'Option --country was provided m
     --country ru --country de
 run_case 'rejects a duplicate print-report option' 2 'Option --print-report was provided more than once' \
     --print-report --print-report
+run_case 'rejects a duplicate temporary listener option' 2 \
+    'Option --no-temporary-listeners was provided more than once' \
+    --no-temporary-listeners --no-temporary-listeners
 run_case 'rejects a duplicate cleanup option' 2 'Option --cleanup was provided more than once' \
     --cleanup --cleanup
 run_case 'rejects a duplicate report directory option' 2 'Option --report-dir was provided more than once' \

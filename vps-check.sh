@@ -248,6 +248,8 @@ main() {
     local hysteria2_port_seen=0
     local print_report=0
     local print_report_seen=0
+    local temporary_listeners_enabled=1
+    local temporary_listeners_seen=0
     local cleanup_requested=0
     local cleanup_seen=0
     local report_dir=$DEFAULT_REPORT_DIR
@@ -308,6 +310,13 @@ main() {
                 print_report_seen=1
                 shift
                 ;;
+            --no-temporary-listeners)
+                (( temporary_listeners_seen == 0 )) \
+                    || fail_usage 'Option --no-temporary-listeners was provided more than once.'
+                temporary_listeners_enabled=0
+                temporary_listeners_seen=1
+                shift
+                ;;
             --report-dir)
                 (( report_dir_seen == 0 )) || fail_usage 'Option --report-dir was provided more than once.'
                 (( $# >= 2 )) || fail_usage 'Option --report-dir requires a value.'
@@ -357,6 +366,11 @@ main() {
     printf 'VLESS TCP port: %s\n' "$vless_port"
     printf 'Hysteria2 UDP port: %s\n' "$hysteria2_port"
     printf 'Report directory: %s\n' "$report_dir"
+    if (( temporary_listeners_enabled == 1 )); then
+        printf 'Temporary listeners: enabled\n'
+    else
+        printf 'Temporary listeners: disabled\n'
+    fi
     if (( cleanup_requested == 1 )); then
         printf 'Automatic package cleanup: enabled\n'
     else
