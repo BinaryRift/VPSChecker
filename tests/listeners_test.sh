@@ -120,7 +120,7 @@ test_starts_udp_listener_on_free_port() (
 )
 
 test_authorizes_privileged_port() (
-    local test_root state_path arguments_path authorized_path privileged_path pid
+    local test_root state_path arguments_path authorized_path privileged_path output_path output pid
 
     test_root=$(mktemp -d) || return 1
     trap 'stop_temporary_listeners >/dev/null 2>&1 || true; rm -rf -- "$test_root"' EXIT
@@ -128,6 +128,7 @@ test_authorizes_privileged_port() (
     arguments_path="$test_root/arguments"
     authorized_path="$test_root/authorized"
     privileged_path="$test_root/privileged"
+    output_path="$test_root/output"
     configure_mock_listener "$state_path" "$arguments_path"
     listener_current_uid() {
         printf '1000\n'
@@ -143,10 +144,12 @@ test_authorizes_privileged_port() (
         "$@"
     }
 
-    prepare_listener tcp 443 >/dev/null || return 1
+    prepare_listener tcp 443 > "$output_path" || return 1
+    output=$(< "$output_path")
     pid=$PREPARED_LISTENER_PID
     [[ $PREPARED_LISTENER_SOURCE == TEMPORARY \
         && $PREPARED_LISTENER_PRIVILEGED -eq 1 \
+        && $output == *'Temporary tcp/443 listener requires sudo (port below 1024).'* \
         && -f $authorized_path \
         && $(sed -n '1p' "$privileged_path") == \
             'timeout --signal=TERM --kill-after=2s 180s nc -4 -d -k -l 443' ]] || return 1

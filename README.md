@@ -45,6 +45,10 @@ country, and TCP/443 and UDP/443 as the VLESS and Hysteria2 ports:
 ./vpschecker/vps-check.sh
 ```
 
+By default, VPSChecker reuses listeners already bound to these ports or starts
+temporary TCP and UDP listeners for the external checks. Starting a listener on
+the default port 443 may require `sudo` authorization.
+
 If VPSChecker prints a cleanup command, run it later from the same directory. It
 shows the exact packages and asks for confirmation before removing them:
 
@@ -77,6 +81,53 @@ ports, and report directory can be specified explicitly:
 
 When `--ip` is omitted, VPSChecker detects the external IPv4 through HTTPS. An
 explicit value skips that request.
+
+### Temporary listeners and firewall
+
+Immediately before the regional checks, VPSChecker reuses existing listeners on
+the selected ports or starts temporary ones when the ports are free. It verifies
+temporary listeners locally, stops only the processes it started, and records
+the source as `EXISTING`, `TEMPORARY`, or `NONE` in the reports. This does not
+install or run VLESS or Hysteria2 services, and no protocol handshake is
+performed.
+
+For a free port below 1024, including the default port 443, VPSChecker requests
+root privileges through `sudo`. To inspect existing listeners without starting
+temporary ones, use:
+
+```bash
+./vpschecker/vps-check.sh --no-temporary-listeners
+```
+
+VPSChecker never changes the OS firewall or hosting-provider inbound rules. If a
+verified local TCP listener is unreachable from all external nodes, the report
+marks a possible firewall issue. Check both the OS firewall and the provider's
+firewall, security group, or inbound rules, allow the selected TCP and UDP ports,
+and run the check again.
+
+For example, if UFW is already active, first inspect its rules. Add rules only
+when the selected ports are not already allowed:
+
+```bash
+sudo ufw status numbered
+sudo ufw allow 443/tcp comment 'VPSChecker temporary TCP check'
+sudo ufw allow 443/udp comment 'VPSChecker temporary UDP check'
+
+./vpschecker/vps-check.sh
+```
+
+After the check, remove only rules that the commands above actually added. Do
+not remove rules that existed before the check:
+
+```bash
+sudo ufw delete allow 443/tcp
+sudo ufw delete allow 443/udp
+```
+
+If UFW is inactive or unavailable, inspect the existing nftables configuration
+with `sudo nft list ruleset` and follow the firewall policy already used by the
+server. Provider-side rules must be opened and closed separately in the hosting
+control panel. Keep ports exposed only for the duration of the check.
 
 Also print the full text report while keeping both report files:
 
@@ -208,7 +259,8 @@ Regional checks use the current Check-Host node list. VPSChecker selects up to
 three nodes in the target country and three control nodes in other countries,
 then runs an auxiliary ping, a VLESS TCP connection check, and a Hysteria2 UDP
 check. A UDP result is reported as `OPEN_OR_FILTERED`, not as proof that
-Hysteria2 works.
+Hysteria2 works. By default, these port checks use existing or temporary local
+listeners as described above.
 
 The read-only preflight determines the operating system, current privileges,
 external IPv4, required commands and APT packages, and local TCP/UDP listeners.

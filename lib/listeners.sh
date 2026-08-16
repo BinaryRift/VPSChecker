@@ -225,6 +225,8 @@ prepare_listener() {
                 "$protocol" "$port"
             return 1
         }
+        printf 'Temporary %s/%s listener requires sudo (port below 1024).\n' \
+            "$protocol" "$port"
         printf 'Authorizing temporary %s/%s listener...\n' "$protocol" "$port"
         listener_authorize_sudo || {
             terminal_error 'could not authorize temporary %s/%s listener.' "$protocol" "$port"
