@@ -106,6 +106,7 @@ prepare_ipquality() {
 
 run_ipquality() {
     local status=0
+    local valid_json=0
 
     [[ -f $IPQUALITY_SCRIPT_PATH ]] || {
         printf 'Error: verified IPQuality runtime source is unavailable.\n' >&2
@@ -124,13 +125,16 @@ run_ipquality() {
         > "$IPQUALITY_JSON_PATH" 2> "$IPQUALITY_LOG_PATH" || status=$?
     chmod 0600 "$IPQUALITY_JSON_PATH" "$IPQUALITY_LOG_PATH" 2>/dev/null || true
 
-    if (( status != 0 )); then
+    if jq -e 'type == "object"' "$IPQUALITY_JSON_PATH" >/dev/null 2>&1; then
+        valid_json=1
+    fi
+    if (( status != 0 && (status != 1 || valid_json == 0) )); then
         rm -f -- "$IPQUALITY_JSON_PATH"
         IPQUALITY_JSON_PATH=''
         printf 'Error: IPQuality exited with status %s.\n' "$status" >&2
         return "$status"
     fi
-    if ! jq -e 'type == "object"' "$IPQUALITY_JSON_PATH" >/dev/null 2>&1; then
+    if (( valid_json == 0 )); then
         rm -f -- "$IPQUALITY_JSON_PATH"
         IPQUALITY_JSON_PATH=''
         printf 'Error: IPQuality did not produce a valid JSON object.\n' >&2

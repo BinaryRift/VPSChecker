@@ -85,10 +85,10 @@ calculate_planned_additions() {
     [[ -f ${DEPENDENCY_BEFORE_PACKAGES_PATH:-} ]] || return 1
     [[ -f ${DEPENDENCY_PLANNED_PACKAGES_PATH:-} ]] || return 1
     current_snapshot=$(installed_package_names) || return 1
-    comm -13 \
+    LC_ALL=C comm -13 \
         <(LC_ALL=C sort -u "$DEPENDENCY_BEFORE_PACKAGES_PATH") \
         <(printf '%s\n' "$current_snapshot" | LC_ALL=C sort -u) \
-        | comm -12 - <(LC_ALL=C sort -u "$DEPENDENCY_PLANNED_PACKAGES_PATH")
+        | LC_ALL=C comm -12 - <(LC_ALL=C sort -u "$DEPENDENCY_PLANNED_PACKAGES_PATH")
 }
 
 record_package_changes() {

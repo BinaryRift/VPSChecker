@@ -37,6 +37,27 @@ test_skips_install_when_dependencies_exist() (
     (( apt_called == 0 ))
 )
 
+test_uses_c_locale_for_package_comparison() (
+    local test_temp additions
+
+    test_temp=$(mktemp -d)
+    TMPDIR=$test_temp
+    trap 'cleanup_dependency_journal; rmdir -- "$test_temp" 2>/dev/null || true' EXIT
+    create_dependency_journal 'base-system' || return 1
+    printf '%s\n' new-package > "$DEPENDENCY_PLANNED_PACKAGES_PATH"
+
+    dpkg-query() {
+        printf '%s\n' base-system new-package
+    }
+    comm() {
+        [[ ${LC_ALL:-} == C ]] || return 64
+        command comm "$@"
+    }
+
+    additions=$(calculate_planned_additions) || return 1
+    [[ $additions == new-package ]]
+)
+
 test_installs_only_missing_packages_and_journals_changes() (
     local test_temp journal apt_log
     local install_completed=0
@@ -216,6 +237,7 @@ test_decline_makes_no_changes() (
 )
 
 run_test 'skips APT when every dependency is installed' test_skips_install_when_dependencies_exist
+run_test 'uses the C locale for package comparisons' test_uses_c_locale_for_package_comparison
 run_test 'installs only missing packages and records all package changes' test_installs_only_missing_packages_and_journals_changes
 run_test 'removes only packages added by this run' test_removes_only_packages_added_by_this_run
 run_test 'skips cleanup when APT would remove an existing package' test_skips_cleanup_when_apt_would_remove_an_existing_package

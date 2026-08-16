@@ -21,3 +21,5 @@ if [[ ${VPSCHECK_IPQUALITY_INVALID_JSON:-0} == 1 ]]; then
 else
     printf '{"Head":{"IP":"203.0.113.10"},"Info":{},"Score":{},"Factor":{}}\n'
 fi
+
+exit "${VPSCHECK_IPQUALITY_FINAL_EXIT:-0}"

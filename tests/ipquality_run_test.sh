@@ -78,6 +78,18 @@ test_nonzero_exit_is_reported() (
     [[ $status -eq 7 && -z $IPQUALITY_JSON_PATH && -f $IPQUALITY_LOG_PATH ]]
 )
 
+test_ipv4_exit_one_with_valid_json_is_accepted() (
+    setup_mock_ipquality
+    trap cleanup_ipquality_temp EXIT
+    jq() {
+        mock_jq "$@"
+    }
+    export VPSCHECK_IPQUALITY_FINAL_EXIT=1
+
+    run_ipquality >/dev/null || return 1
+    [[ -f $IPQUALITY_JSON_PATH ]]
+)
+
 test_invalid_json_is_rejected() (
     setup_mock_ipquality
     trap cleanup_ipquality_temp EXIT
@@ -91,6 +103,7 @@ test_invalid_json_is_rejected() (
 )
 
 run_test 'runs with JSON, IPv4, full-IP, no-install, and privacy flags' test_valid_json_and_required_modes
+run_test 'accepts the upstream IPv4 exit status when JSON is valid' test_ipv4_exit_one_with_valid_json_is_accepted
 run_test 'returns the IPQuality exit status and keeps diagnostics' test_nonzero_exit_is_reported
 run_test 'rejects invalid JSON output' test_invalid_json_is_rejected
 
