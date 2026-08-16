@@ -19,6 +19,27 @@ terminal_colors_enabled() {
     terminal_stream_is_tty "$fd"
 }
 
+terminal_status_style() {
+    case $1 in
+        OK|REACHABLE|AVAILABLE|REPLACEMENT_UNLIKELY)
+            printf '%s' "$TERMINAL_COLOR_GREEN"
+            ;;
+        WARNING|PARTIAL|INCONCLUSIVE|REPLACEMENT_MAY_HELP)
+            printf '%s' "$TERMINAL_COLOR_YELLOW"
+            ;;
+        POOR|UNREACHABLE|CLOSED|REPLACEMENT_JUSTIFIED)
+            printf '%s' "$TERMINAL_COLOR_RED"
+            ;;
+        UNKNOWN)
+            printf '%s' "$TERMINAL_COLOR_GRAY"
+            ;;
+        OPEN_OR_FILTERED)
+            printf '%s' "$TERMINAL_COLOR_CYAN"
+            ;;
+        *) return 1 ;;
+    esac
+}
+
 terminal_printf() {
     local fd=$1
     local style=$2

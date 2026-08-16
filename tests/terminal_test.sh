@@ -69,10 +69,48 @@ test_supports_stderr_styles() (
     [[ $output == $'\033[31mError: failed\033[0m' ]]
 )
 
+test_maps_success_statuses_to_green() (
+    local status
+
+    for status in OK REACHABLE AVAILABLE REPLACEMENT_UNLIKELY; do
+        [[ $(terminal_status_style "$status") == "$TERMINAL_COLOR_GREEN" ]] || return 1
+    done
+)
+
+test_maps_caution_statuses_to_yellow() (
+    local status
+
+    for status in WARNING PARTIAL INCONCLUSIVE REPLACEMENT_MAY_HELP; do
+        [[ $(terminal_status_style "$status") == "$TERMINAL_COLOR_YELLOW" ]] || return 1
+    done
+)
+
+test_maps_failure_statuses_to_red() (
+    local status
+
+    for status in POOR UNREACHABLE CLOSED REPLACEMENT_JUSTIFIED; do
+        [[ $(terminal_status_style "$status") == "$TERMINAL_COLOR_RED" ]] || return 1
+    done
+)
+
+test_maps_neutral_statuses_separately() (
+    [[ $(terminal_status_style UNKNOWN) == "$TERMINAL_COLOR_GRAY" ]] || return 1
+    [[ $(terminal_status_style OPEN_OR_FILTERED) == "$TERMINAL_COLOR_CYAN" ]]
+)
+
+test_rejects_unmapped_statuses() (
+    ! terminal_status_style UNMAPPED >/dev/null
+)
+
 run_test 'uses plain output when stdout is not a TTY' test_uses_plain_output_without_tty
 run_test 'adds color and reset codes for TTY output' test_colors_and_resets_tty_output
 run_test 'honors NO_COLOR for TTY output' test_no_color_disables_tty_colors
 run_test 'supports styled stderr output' test_supports_stderr_styles
+run_test 'maps successful statuses to green' test_maps_success_statuses_to_green
+run_test 'maps caution statuses to yellow' test_maps_caution_statuses_to_yellow
+run_test 'maps failure statuses to red' test_maps_failure_statuses_to_red
+run_test 'distinguishes unknown and ambiguous statuses' test_maps_neutral_statuses_separately
+run_test 'rejects statuses without a color mapping' test_rejects_unmapped_statuses
 
 printf '\n%s passed, %s failed\n' "$passed" "$failed"
 (( failed == 0 ))
