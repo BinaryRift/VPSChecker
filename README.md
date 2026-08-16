@@ -84,6 +84,14 @@ Also print the full text report while keeping both report files:
 ./vpschecker/vps-check.sh --print-report
 ```
 
+Status colors are used only for interactive terminal output. Saved reports and
+`--print-report` remain plain text. To disable colors elsewhere, set `NO_COLOR`
+to any value:
+
+```bash
+NO_COLOR=1 ./vpschecker/vps-check.sh
+```
+
 Automatically remove packages added by VPSChecker after the checks:
 
 ```bash

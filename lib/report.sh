@@ -402,7 +402,11 @@ present_reports() {
         fi
     fi
     printf '\n'
-    terminal_heading_printf 1 'Reports:'
+    if (( print_report == 1 )); then
+        printf 'Reports:'
+    else
+        terminal_heading_printf 1 'Reports:'
+    fi
     printf '\n'
     printf '  JSON: %s\n' "$REPORT_JSON_PATH"
     printf '  Text: %s\n' "$REPORT_TEXT_PATH"
