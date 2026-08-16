@@ -9,6 +9,8 @@ readonly SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 . "$SCRIPT_DIR/lib/terminal.sh"
 # shellcheck source=lib/dependencies.sh
 . "$SCRIPT_DIR/lib/dependencies.sh"
+# shellcheck source=lib/listeners.sh
+. "$SCRIPT_DIR/lib/listeners.sh"
 # shellcheck source=lib/ipquality.sh
 . "$SCRIPT_DIR/lib/ipquality.sh"
 # shellcheck source=lib/reputation.sh
@@ -134,43 +136,6 @@ package_state() {
     else
         printf 'not installed\n'
     fi
-}
-
-listener_state() {
-    local protocol=$1
-    local port=$2
-    local output
-
-    command -v ss >/dev/null 2>&1 || {
-        printf 'unknown (ss missing)\n'
-        return
-    }
-
-    case $protocol in
-        tcp) output=$(ss -H -ltn "sport = :$port" 2>/dev/null) || {
-            printf 'unknown (ss failed)\n'
-            return
-        } ;;
-        udp) output=$(ss -H -lun "sport = :$port" 2>/dev/null) || {
-            printf 'unknown (ss failed)\n'
-            return
-        } ;;
-        *) return 1 ;;
-    esac
-
-    if [[ -n $output ]]; then
-        printf 'listening\n'
-    else
-        printf 'not listening\n'
-    fi
-}
-
-collect_listener_states() {
-    local vless_port=$1
-    local hysteria2_port=$2
-
-    VLESS_LISTENER_STATE=$(listener_state tcp "$vless_port")
-    HYSTERIA2_LISTENER_STATE=$(listener_state udp "$hysteria2_port")
 }
 
 run_preflight() {

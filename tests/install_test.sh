@@ -38,6 +38,7 @@ create_release_assets() {
         lib/cli.sh
         lib/dependencies.sh
         lib/ipquality.sh
+        lib/listeners.sh
         lib/report.sh
         lib/report_path.sh
         lib/reputation.sh
@@ -76,6 +77,7 @@ test_installs_verified_release() (
     [[ -f $test_root/work/vpschecker/vps-check.sh \
         && -x $test_root/work/vpschecker/vps-check.sh \
         && -f $test_root/work/vpschecker/lib/report.sh \
+        && -f $test_root/work/vpschecker/lib/listeners.sh \
         && -f $test_root/work/vpschecker/lib/terminal.sh \
         && $output == *'VPSChecker installed in'* \
         && $output == *'Now you should run: ./vpschecker/vps-check.sh'* \

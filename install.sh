@@ -75,6 +75,7 @@ validate_runtime_files() {
         lib/cli.sh
         lib/dependencies.sh
         lib/ipquality.sh
+        lib/listeners.sh
         lib/report.sh
         lib/report_path.sh
         lib/reputation.sh
