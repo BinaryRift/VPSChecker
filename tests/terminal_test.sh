@@ -140,6 +140,36 @@ test_prints_bold_headings() (
     [[ $output == $'\033[1mResult:\033[0m' ]]
 )
 
+test_term_dumb_disables_tty_colors() (
+    local output
+
+    terminal_stream_is_tty() {
+        return 0
+    }
+    TERM=dumb
+    unset NO_COLOR
+    output=$(terminal_status_printf 1 OK) || return 1
+    [[ $output == OK ]]
+)
+
+test_no_color_disables_all_output_styles() (
+    local status_output heading_output error_output warning_output
+
+    terminal_stream_is_tty() {
+        return 0
+    }
+    TERM=xterm
+    NO_COLOR=1
+    status_output=$(terminal_status_printf 1 OK) || return 1
+    heading_output=$(terminal_heading_printf 1 'Result:') || return 1
+    error_output=$(terminal_error 'failed' 2>&1) || return 1
+    warning_output=$(terminal_warning 'check' 2>&1) || return 1
+    [[ $status_output == OK \
+        && $heading_output == 'Result:' \
+        && $error_output == 'Error: failed' \
+        && $warning_output == 'Warning: check' ]]
+)
+
 run_test 'uses plain output when stdout is not a TTY' test_uses_plain_output_without_tty
 run_test 'adds color and reset codes for TTY output' test_colors_and_resets_tty_output
 run_test 'honors NO_COLOR for TTY output' test_no_color_disables_tty_colors
@@ -152,6 +182,8 @@ run_test 'rejects statuses without a color mapping' test_rejects_unmapped_status
 run_test 'prints only the status value in its mapped color' test_prints_only_the_colored_status_value
 run_test 'colors only error and warning labels' test_colors_only_error_and_warning_labels
 run_test 'prints headings in bold' test_prints_bold_headings
+run_test 'disables colors for TERM=dumb' test_term_dumb_disables_tty_colors
+run_test 'disables every output style with NO_COLOR' test_no_color_disables_all_output_styles
 
 printf '\n%s passed, %s failed\n' "$passed" "$failed"
 (( failed == 0 ))
